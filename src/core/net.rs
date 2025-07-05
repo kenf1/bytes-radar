@@ -84,7 +84,8 @@ impl RemoteAnalyzer {
 
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
         let download_url = self.resolve_git_url(url).await?;
-        self.analyze_tarball(&download_url).await
+        let project_analysis = self.analyze_tarball_with_name(&download_url, url).await?;
+        Ok(project_analysis)
     }
 
     async fn resolve_git_url(&self, url: &str) -> Result<String> {
@@ -390,13 +391,17 @@ impl RemoteAnalyzer {
         None
     }
 
-    async fn analyze_tarball(&self, url: &str) -> Result<ProjectAnalysis> {
-        let project_name = self.extract_project_name(url);
+    async fn analyze_tarball_with_name(
+        &self,
+        download_url: &str,
+        original_url: &str,
+    ) -> Result<ProjectAnalysis> {
+        let project_name = self.extract_project_name_from_original(original_url);
         let mut project_analysis = ProjectAnalysis::new(project_name);
 
         let response = self
             .client
-            .get(url)
+            .get(download_url)
             .send()
             .await
             .map_err(|e| AnalysisError::network(format!("Failed to fetch URL: {}", e)))?;
@@ -413,10 +418,18 @@ impl RemoteAnalyzer {
         #[cfg(feature = "cli")]
         if let Some(pb) = &self.progress_bar {
             if total_size > 0 {
+                use indicatif::ProgressStyle;
+                pb.set_style(
+                    ProgressStyle::default_bar()
+                        .template("[{elapsed_precise}] [{wide_bar:.cyan/blue}] {decimal_bytes_per_sec} {binary_bytes}/{binary_total_bytes} ({eta}) {msg}")
+                        .unwrap_or_else(|_| ProgressStyle::default_bar())
+                        .progress_chars("#>-"),
+                );
                 pb.set_length(total_size);
                 pb.set_message("Downloading...");
             } else {
-                pb.set_message("Downloading (unknown size)...");
+                pb.set_message("Downloading...");
+                pb.enable_steady_tick(std::time::Duration::from_millis(120));
             }
         }
 
@@ -436,7 +449,8 @@ impl RemoteAnalyzer {
                 if total_size > 0 {
                     pb.set_position(downloaded);
                 } else {
-                    pb.set_message(format!("Downloaded {} bytes...", downloaded));
+                    let formatted = Self::format_bytes_simple(downloaded);
+                    pb.set_message(format!("Downloaded {}...", formatted));
                 }
             }
         }
@@ -511,6 +525,51 @@ impl RemoteAnalyzer {
         Ok(())
     }
 
+    fn extract_project_name_from_original(&self, url: &str) -> String {
+        if url.starts_with("http://") || url.starts_with("https://") {
+            let url = url.trim_end_matches('/');
+
+            if url.contains("/tree/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
+                    if tree_pos > 1 {
+                        let repo = parts[tree_pos - 1];
+                        let branch = parts.get(tree_pos + 1).unwrap_or(&"unknown");
+                        return format!("{}@{}", repo, branch);
+                    }
+                }
+            }
+
+            if url.contains("/commit/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(commit_pos) = parts.iter().position(|&x| x == "commit") {
+                    if commit_pos > 1 {
+                        let repo = parts[commit_pos - 1];
+                        let commit = parts.get(commit_pos + 1).unwrap_or(&"unknown");
+                        return format!("{}@{}", repo, &commit[..7.min(commit.len())]);
+                    }
+                }
+            }
+
+            let parts: Vec<&str> = url.split('/').collect();
+            if parts.len() >= 2 {
+                let repo = parts[parts.len() - 1];
+                return format!("{}@main", repo);
+            }
+        } else if url.contains('/') && !url.contains('.') {
+            let parts: Vec<&str> = url.split('@').collect();
+            let repo_part = parts[0];
+            let branch = parts.get(1).unwrap_or(&"main");
+
+            if let Some(repo_name) = repo_part.split('/').last() {
+                return format!("{}@{}", repo_name, branch);
+            }
+        }
+
+        "remote-project".to_string()
+    }
+
+    #[allow(dead_code)]
     fn extract_project_name(&self, url: &str) -> String {
         let url_path = url.trim_end_matches('/');
 
@@ -525,6 +584,29 @@ impl RemoteAnalyzer {
         }
 
         "remote-project".to_string()
+    }
+
+    fn format_bytes_simple(bytes: u64) -> String {
+        const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB"];
+        const THRESHOLD: f64 = 1024.0;
+
+        if bytes == 0 {
+            return "0 B".to_string();
+        }
+
+        let mut size = bytes as f64;
+        let mut unit_index = 0;
+
+        while size >= THRESHOLD && unit_index < UNITS.len() - 1 {
+            size /= THRESHOLD;
+            unit_index += 1;
+        }
+
+        if unit_index == 0 {
+            format!("{} {}", bytes, UNITS[unit_index])
+        } else {
+            format!("{:.1} {}", size, UNITS[unit_index])
+        }
     }
 }
 

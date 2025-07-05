@@ -1,3 +1,4 @@
+use super::progress::format_number;
 use crate::core::{analysis::ProjectAnalysis, error::Result};
 use colored::Colorize;
 use serde_xml_rs;
@@ -20,32 +21,32 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
     println!(
         " {:<20} {}",
         "Total Files:".bright_blue(),
-        summary.total_files.to_string().bright_yellow()
+        format_number(summary.total_files).bright_yellow()
     );
     println!(
         " {:<20} {}",
         "Total Lines:".bright_blue(),
-        summary.total_lines.to_string().bright_yellow()
+        format_number(summary.total_lines).bright_yellow()
     );
     println!(
         " {:<20} {}",
         "Code Lines:".bright_blue(),
-        summary.total_code_lines.to_string().bright_green()
+        format_number(summary.total_code_lines).bright_green()
     );
     println!(
         " {:<20} {}",
         "Comment Lines:".bright_blue(),
-        summary.total_comment_lines.to_string().bright_cyan()
+        format_number(summary.total_comment_lines).bright_cyan()
     );
     println!(
         " {:<20} {}",
         "Blank Lines:".bright_blue(),
-        summary.total_blank_lines.to_string().bright_white()
+        format_number(summary.total_blank_lines).bright_white()
     );
     println!(
         " {:<20} {}",
         "Languages:".bright_blue(),
-        summary.language_count.to_string().bright_magenta()
+        format_number(summary.language_count).bright_magenta()
     );
     if let Some(ref primary) = summary.primary_language {
         println!(
@@ -78,20 +79,26 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
             "Code".bright_white().bold(),
             "Comments".bright_white().bold(),
             "Blanks".bright_white().bold(),
-            "Code%".bright_white().bold(),
+            "Share%".bright_white().bold(),
         );
         println!("{}", "─".repeat(80).bright_black());
 
         for stats in &language_stats {
+            let share_percentage = if summary.total_lines > 0 {
+                (stats.total_lines as f64 / summary.total_lines as f64) * 100.0
+            } else {
+                0.0
+            };
+
             println!(
                 " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
                 stats.language_name.bright_cyan(),
-                stats.file_count.to_string().bright_white(),
-                stats.total_lines.to_string().bright_yellow(),
-                stats.code_lines.to_string().bright_green(),
-                stats.comment_lines.to_string().bright_blue(),
-                stats.blank_lines.to_string().bright_white(),
-                stats.complexity_ratio * 100.0
+                format_number(stats.file_count).bright_white(),
+                format_number(stats.total_lines).bright_yellow(),
+                format_number(stats.code_lines).bright_green(),
+                format_number(stats.comment_lines).bright_blue(),
+                format_number(stats.blank_lines).bright_white(),
+                share_percentage
             );
         }
 
@@ -99,12 +106,12 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
         println!(
             " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
             "Total".bright_green().bold(),
-            summary.total_files.to_string().bright_green(),
-            summary.total_lines.to_string().bright_green(),
-            summary.total_code_lines.to_string().bright_green(),
-            summary.total_comment_lines.to_string().bright_green(),
-            summary.total_blank_lines.to_string().bright_green(),
-            summary.overall_complexity_ratio * 100.0
+            format_number(summary.total_files).bright_green(),
+            format_number(summary.total_lines).bright_green(),
+            format_number(summary.total_code_lines).bright_green(),
+            format_number(summary.total_comment_lines).bright_green(),
+            format_number(summary.total_blank_lines).bright_green(),
+            100.0
         );
     }
 
@@ -122,9 +129,9 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
                     println!(
                         "   {:<50} {:>6} lines ({} code, {} comments)",
                         file.file_path.bright_white(),
-                        file.total_lines.to_string().bright_yellow(),
-                        file.code_lines.to_string().bright_green(),
-                        file.comment_lines.to_string().bright_blue()
+                        format_number(file.total_lines).bright_yellow(),
+                        format_number(file.code_lines).bright_green(),
+                        format_number(file.comment_lines).bright_blue()
                     );
                 }
             }
@@ -140,18 +147,25 @@ pub fn print_json_format(project_analysis: &ProjectAnalysis) -> Result<()> {
 
 pub fn print_csv_format(project_analysis: &ProjectAnalysis) -> Result<()> {
     let language_stats = project_analysis.get_language_statistics();
+    let summary = project_analysis.get_summary();
 
-    println!("Language,Files,Lines,Code,Comments,Blanks,CodeRatio");
+    println!("Language,Files,Lines,Code,Comments,Blanks,SharePercent");
     for stats in language_stats {
+        let share_percentage = if summary.total_lines > 0 {
+            (stats.total_lines as f64 / summary.total_lines as f64) * 100.0
+        } else {
+            0.0
+        };
+
         println!(
-            "{},{},{},{},{},{},{:.2}",
+            "\"{}\",{},{},{},{},{},{:.2}",
             stats.language_name,
-            stats.file_count,
-            stats.total_lines,
-            stats.code_lines,
-            stats.comment_lines,
-            stats.blank_lines,
-            stats.complexity_ratio * 100.0
+            format_number(stats.file_count),
+            format_number(stats.total_lines),
+            format_number(stats.code_lines),
+            format_number(stats.comment_lines),
+            format_number(stats.blank_lines),
+            share_percentage
         );
     }
 
