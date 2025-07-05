@@ -8,80 +8,68 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
     let language_stats = project_analysis.get_language_statistics();
 
     if !quiet {
-        println!();
-        println!("{}", "PROJECT SUMMARY".bright_white().bold());
-        println!("{}", "─".repeat(80).bright_black());
+        println!("{}", "=".repeat(80));
     }
 
+    println!(" {:<56} {}", "Project", summary.project_name);
     println!(
-        " {:<20} {}",
-        "Project:".bright_blue(),
-        summary.project_name.bright_white()
+        " {:<56} {}",
+        "Total Files",
+        format_number(summary.total_files)
     );
     println!(
-        " {:<20} {}",
-        "Total Files:".bright_blue(),
-        format_number(summary.total_files).bright_yellow()
+        " {:<56} {}",
+        "Total Lines",
+        format_number(summary.total_lines)
     );
     println!(
-        " {:<20} {}",
-        "Total Lines:".bright_blue(),
-        format_number(summary.total_lines).bright_yellow()
+        " {:<56} {}",
+        "Code Lines",
+        format_number(summary.total_code_lines)
     );
     println!(
-        " {:<20} {}",
-        "Code Lines:".bright_blue(),
-        format_number(summary.total_code_lines).bright_green()
+        " {:<56} {}",
+        "Comment Lines",
+        format_number(summary.total_comment_lines)
     );
     println!(
-        " {:<20} {}",
-        "Comment Lines:".bright_blue(),
-        format_number(summary.total_comment_lines).bright_cyan()
+        " {:<56} {}",
+        "Blank Lines",
+        format_number(summary.total_blank_lines)
     );
     println!(
-        " {:<20} {}",
-        "Blank Lines:".bright_blue(),
-        format_number(summary.total_blank_lines).bright_white()
-    );
-    println!(
-        " {:<20} {}",
-        "Languages:".bright_blue(),
-        format_number(summary.language_count).bright_magenta()
+        " {:<56} {}",
+        "Languages",
+        format_number(summary.language_count)
     );
     if let Some(ref primary) = summary.primary_language {
-        println!(
-            " {:<20} {}",
-            "Primary Language:".bright_blue(),
-            primary.bright_magenta()
-        );
+        println!(" {:<56} {}", "Primary Language", primary);
     }
     println!(
-        " {:<20} {:.1}%",
-        "Code Ratio:".bright_blue(),
+        " {:<56} {:.1}%",
+        "Code Ratio",
         summary.overall_complexity_ratio * 100.0
     );
     println!(
-        " {:<20} {:.1}%",
-        "Documentation:".bright_blue(),
+        " {:<56} {:.1}%",
+        "Documentation",
         summary.overall_documentation_ratio * 100.0
     );
 
     if !language_stats.is_empty() && !quiet {
-        println!();
-        println!("{}", "LANGUAGE BREAKDOWN".bright_white().bold());
-        println!("{}", "─".repeat(80).bright_black());
+        println!("{}", "=".repeat(80));
 
         println!(
             " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>8}",
-            "Language".bright_white().bold(),
-            "Files".bright_white().bold(),
-            "Lines".bright_white().bold(),
-            "Code".bright_white().bold(),
-            "Comments".bright_white().bold(),
-            "Blanks".bright_white().bold(),
-            "Share%".bright_white().bold(),
+            "Language".bold(),
+            "Files",
+            "Lines",
+            "Code",
+            "Comments",
+            "Blanks",
+            "Share%"
         );
-        println!("{}", "─".repeat(80).bright_black());
+        println!("{}", "=".repeat(80));
 
         for stats in &language_stats {
             let share_percentage = if summary.total_lines > 0 {
@@ -92,46 +80,44 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
 
             println!(
                 " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
-                stats.language_name.bright_cyan(),
-                format_number(stats.file_count).bright_white(),
-                format_number(stats.total_lines).bright_yellow(),
-                format_number(stats.code_lines).bright_green(),
-                format_number(stats.comment_lines).bright_blue(),
-                format_number(stats.blank_lines).bright_white(),
+                stats.language_name,
+                format_number(stats.file_count),
+                format_number(stats.total_lines),
+                format_number(stats.code_lines),
+                format_number(stats.comment_lines),
+                format_number(stats.blank_lines),
                 share_percentage
             );
         }
 
-        println!("{}", "─".repeat(80).bright_black());
+        println!("{}", "=".repeat(80));
         println!(
             " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
-            "Total".bright_green().bold(),
-            format_number(summary.total_files).bright_green(),
-            format_number(summary.total_lines).bright_green(),
-            format_number(summary.total_code_lines).bright_green(),
-            format_number(summary.total_comment_lines).bright_green(),
-            format_number(summary.total_blank_lines).bright_green(),
+            "Total".bold(),
+            format_number(summary.total_files),
+            format_number(summary.total_lines),
+            format_number(summary.total_code_lines),
+            format_number(summary.total_comment_lines),
+            format_number(summary.total_blank_lines),
             100.0
         );
     }
 
     if detailed && !quiet {
-        println!();
-        println!("{}", "FILE DETAILS".bright_white().bold());
-        println!("{}", "─".repeat(80).bright_black());
+        println!("{}", "=".repeat(80));
 
         for (lang_name, analysis) in &project_analysis.language_analyses {
             if !analysis.file_metrics.is_empty() {
                 println!();
-                println!("{} Files", lang_name.bright_magenta().bold());
+                println!("{} Files", lang_name.bold());
 
                 for file in &analysis.file_metrics {
                     println!(
                         "   {:<50} {:>6} lines ({} code, {} comments)",
-                        file.file_path.bright_white(),
-                        format_number(file.total_lines).bright_yellow(),
-                        format_number(file.code_lines).bright_green(),
-                        format_number(file.comment_lines).bright_blue()
+                        file.file_path,
+                        format_number(file.total_lines),
+                        format_number(file.code_lines),
+                        format_number(file.comment_lines)
                     );
                 }
             }

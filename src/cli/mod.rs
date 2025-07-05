@@ -46,7 +46,6 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
 
     if should_show_progress && !cli.quiet {
         println!("Analyzing: {}", processed_url);
-        println!("{}", "─".repeat(80));
     }
 
     let start_time = Instant::now();
