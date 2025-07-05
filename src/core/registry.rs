@@ -14,6 +14,12 @@ pub enum LanguageType {
     Other,
 }
 
+impl Default for LanguageType {
+    fn default() -> Self {
+        LanguageType::Programming
+    }
+}
+
 impl Display for LanguageType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -33,106 +39,66 @@ pub enum LineCommentPosition {
     Start,
 }
 
+impl Default for LineCommentPosition {
+    fn default() -> Self {
+        LineCommentPosition::Any
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LanguageDefinition {
+    #[serde(default)]
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extensions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub filenames: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shebangs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mime_types: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty", alias = "line_comment")]
     pub line_comments: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub multi_line_comments: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub nested_comments: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub doc_quotes: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub quotes: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub verbatim_quotes: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub important_syntax: Vec<String>,
+    #[serde(default)]
     pub language_type: LanguageType,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub is_literate: bool,
+    #[serde(default, skip_serializing_if = "is_false", alias = "nested")]
     pub is_nested: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
     pub is_blank: bool,
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
     pub case_sensitive: bool,
+    #[serde(default)]
     pub line_comment_position: LineCommentPosition,
 }
 
-impl LanguageDefinition {
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            display_name: None,
-            extensions: Vec::new(),
-            filenames: Vec::new(),
-            shebangs: Vec::new(),
-            env: Vec::new(),
-            mime_types: Vec::new(),
-            line_comments: Vec::new(),
-            multi_line_comments: Vec::new(),
-            nested_comments: Vec::new(),
-            doc_quotes: Vec::new(),
-            quotes: Vec::new(),
-            verbatim_quotes: Vec::new(),
-            important_syntax: Vec::new(),
-            language_type: LanguageType::Programming,
-            is_literate: false,
-            is_nested: false,
-            is_blank: false,
-            case_sensitive: true,
-            line_comment_position: LineCommentPosition::Any,
-        }
-    }
+fn is_false(b: &bool) -> bool {
+    !b
+}
 
-    pub fn with_display_name(mut self, name: &str) -> Self {
-        self.display_name = Some(name.to_string());
-        self
-    }
+fn is_true(b: &bool) -> bool {
+    *b
+}
 
-    pub fn with_extensions(mut self, extensions: &[&str]) -> Self {
-        self.extensions = extensions.iter().map(|s| s.to_string()).collect();
-        self
-    }
-
-    pub fn with_filenames(mut self, filenames: &[&str]) -> Self {
-        self.filenames = filenames.iter().map(|s| s.to_string()).collect();
-        self
-    }
-
-    pub fn with_line_comments(mut self, comments: &[&str]) -> Self {
-        self.line_comments = comments.iter().map(|s| s.to_string()).collect();
-        self
-    }
-
-    pub fn with_multi_line_comments(mut self, comments: &[(&str, &str)]) -> Self {
-        self.multi_line_comments = comments
-            .iter()
-            .map(|(start, end)| (start.to_string(), end.to_string()))
-            .collect();
-        self
-    }
-
-    pub fn with_quotes(mut self, quotes: &[(&str, &str)]) -> Self {
-        self.quotes = quotes
-            .iter()
-            .map(|(start, end)| (start.to_string(), end.to_string()))
-            .collect();
-        self
-    }
-
-    pub fn with_type(mut self, lang_type: LanguageType) -> Self {
-        self.language_type = lang_type;
-        self
-    }
-
-    pub fn with_nested(mut self, nested: bool) -> Self {
-        self.is_nested = nested;
-        self
-    }
-
-    pub fn with_blank(mut self, blank: bool) -> Self {
-        self.is_blank = blank;
-        self
-    }
+fn default_true() -> bool {
+    true
 }
 
 pub struct LanguageRegistry;
@@ -151,16 +117,9 @@ impl LanguageRegistry {
 
     pub fn detect_by_filename(filename: &str) -> Option<&'static LanguageDefinition> {
         let lower_filename = filename.to_lowercase();
-        for (_, lang) in LANGUAGE_MAP.iter() {
-            if lang
-                .filenames
-                .iter()
-                .any(|f| f.to_lowercase() == lower_filename)
-            {
-                return Some(lang);
-            }
-        }
-        None
+        FILENAME_MAP
+            .get(&lower_filename)
+            .and_then(|name| LANGUAGE_MAP.get(name))
     }
 
     pub fn detect_by_path<P: AsRef<Path>>(path: P) -> Option<&'static LanguageDefinition> {
@@ -192,255 +151,16 @@ impl LanguageRegistry {
     }
 }
 
-// Create comprehensive language definitions based on tokei
 fn create_languages() -> HashMap<String, LanguageDefinition> {
-    let mut languages = HashMap::new();
+    const LANGUAGES_JSON: &str = include_str!("../languages.json");
+    let mut languages: HashMap<String, LanguageDefinition> =
+        serde_json::from_str(LANGUAGES_JSON).expect("Failed to parse languages.json");
 
-    // System languages
-    languages.insert(
-        "C".to_string(),
-        LanguageDefinition::new("C")
-            .with_extensions(&["c", "ec", "pgc"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "Cpp".to_string(),
-        LanguageDefinition::new("Cpp")
-            .with_display_name("C++")
-            .with_extensions(&["cc", "cpp", "cxx", "c++", "pcc", "tpp"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "CHeader".to_string(),
-        LanguageDefinition::new("CHeader")
-            .with_display_name("C Header")
-            .with_extensions(&["h"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "CppHeader".to_string(),
-        LanguageDefinition::new("CppHeader")
-            .with_display_name("C++ Header")
-            .with_extensions(&["hh", "hpp", "hxx", "inl", "ipp"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "Rust".to_string(),
-        LanguageDefinition::new("Rust")
-            .with_extensions(&["rs"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")])
-            .with_nested(true),
-    );
-
-    // Popular web languages
-    languages.insert(
-        "JavaScript".to_string(),
-        LanguageDefinition::new("JavaScript")
-            .with_extensions(&["js", "mjs", "cjs"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("'", "'"), ("`", "`")]),
-    );
-
-    languages.insert(
-        "TypeScript".to_string(),
-        LanguageDefinition::new("TypeScript")
-            .with_extensions(&["ts", "mts", "cts"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("'", "'"), ("`", "`")]),
-    );
-
-    languages.insert(
-        "Jsx".to_string(),
-        LanguageDefinition::new("Jsx")
-            .with_display_name("JSX")
-            .with_extensions(&["jsx"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("'", "'"), ("`", "`")]),
-    );
-
-    languages.insert(
-        "Tsx".to_string(),
-        LanguageDefinition::new("Tsx")
-            .with_display_name("TSX")
-            .with_extensions(&["tsx"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("'", "'"), ("`", "`")]),
-    );
-
-    languages.insert(
-        "Python".to_string(),
-        LanguageDefinition::new("Python")
-            .with_extensions(&["py", "pyw", "pyi"])
-            .with_line_comments(&["#"])
-            .with_quotes(&[("\"", "\""), ("'", "'")]),
-    );
-
-    languages.insert(
-        "Java".to_string(),
-        LanguageDefinition::new("Java")
-            .with_extensions(&["java"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "Go".to_string(),
-        LanguageDefinition::new("Go")
-            .with_extensions(&["go"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "CSharp".to_string(),
-        LanguageDefinition::new("CSharp")
-            .with_display_name("C#")
-            .with_extensions(&["cs", "csx"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    // Functional languages
-    languages.insert(
-        "Haskell".to_string(),
-        LanguageDefinition::new("Haskell")
-            .with_extensions(&["hs"])
-            .with_line_comments(&["--"])
-            .with_multi_line_comments(&[("{-", "-}")])
-            .with_nested(true),
-    );
-
-    languages.insert(
-        "Scala".to_string(),
-        LanguageDefinition::new("Scala")
-            .with_extensions(&["sc", "scala"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\"")]),
-    );
-
-    languages.insert(
-        "Kotlin".to_string(),
-        LanguageDefinition::new("Kotlin")
-            .with_extensions(&["kt", "kts"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("\"\"\"", "\"\"\"")])
-            .with_nested(true),
-    );
-
-    // Shell scripts
-    languages.insert(
-        "Bash".to_string(),
-        LanguageDefinition::new("Bash")
-            .with_display_name("BASH")
-            .with_extensions(&["bash"])
-            .with_line_comments(&["#"])
-            .with_quotes(&[("\"", "\""), ("'", "'")]),
-    );
-
-    languages.insert(
-        "Sh".to_string(),
-        LanguageDefinition::new("Sh")
-            .with_display_name("Shell")
-            .with_extensions(&["sh"])
-            .with_line_comments(&["#"])
-            .with_quotes(&[("\"", "\""), ("'", "'")]),
-    );
-
-    // Web markup and styling
-    languages.insert(
-        "Html".to_string(),
-        LanguageDefinition::new("Html")
-            .with_display_name("HTML")
-            .with_extensions(&["html", "htm"])
-            .with_multi_line_comments(&[("<!--", "-->")])
-            .with_quotes(&[("\"", "\""), ("'", "'")])
-            .with_type(LanguageType::Markup),
-    );
-
-    languages.insert(
-        "Css".to_string(),
-        LanguageDefinition::new("Css")
-            .with_display_name("CSS")
-            .with_extensions(&["css"])
-            .with_line_comments(&["//"])
-            .with_multi_line_comments(&[("/*", "*/")])
-            .with_quotes(&[("\"", "\""), ("'", "'")])
-            .with_type(LanguageType::Markup),
-    );
-
-    // Data formats
-    languages.insert(
-        "Json".to_string(),
-        LanguageDefinition::new("Json")
-            .with_display_name("JSON")
-            .with_extensions(&["json"])
-            .with_type(LanguageType::Data)
-            .with_blank(true),
-    );
-
-    languages.insert(
-        "Yaml".to_string(),
-        LanguageDefinition::new("Yaml")
-            .with_display_name("YAML")
-            .with_extensions(&["yaml", "yml"])
-            .with_line_comments(&["#"])
-            .with_quotes(&[("\"", "\""), ("'", "'")])
-            .with_type(LanguageType::Data),
-    );
-
-    languages.insert(
-        "Toml".to_string(),
-        LanguageDefinition::new("Toml")
-            .with_display_name("TOML")
-            .with_extensions(&["toml"])
-            .with_line_comments(&["#"])
-            .with_quotes(&[
-                ("\"", "\""),
-                ("'", "'"),
-                ("\"\"\"", "\"\"\""),
-                ("'''", "'''"),
-            ])
-            .with_type(LanguageType::Configuration),
-    );
-
-    // Documentation
-    languages.insert(
-        "Markdown".to_string(),
-        LanguageDefinition::new("Markdown")
-            .with_extensions(&["md", "markdown"])
-            .with_type(LanguageType::Documentation),
-    );
-
-    languages.insert(
-        "Text".to_string(),
-        LanguageDefinition::new("Text")
-            .with_display_name("Plain Text")
-            .with_extensions(&["text", "txt"])
-            .with_type(LanguageType::Documentation),
-    );
+    for (key, lang_def) in languages.iter_mut() {
+        if lang_def.name.is_empty() {
+            lang_def.name = key.clone();
+        }
+    }
 
     languages
 }
@@ -455,5 +175,16 @@ fn create_extension_map() -> HashMap<String, String> {
     map
 }
 
+fn create_filename_map() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    for (name, lang) in LANGUAGE_MAP.iter() {
+        for filename in &lang.filenames {
+            map.insert(filename.to_lowercase(), name.clone());
+        }
+    }
+    map
+}
+
 static LANGUAGE_MAP: Lazy<HashMap<String, LanguageDefinition>> = Lazy::new(create_languages);
 static EXTENSION_MAP: Lazy<HashMap<String, String>> = Lazy::new(create_extension_map);
+static FILENAME_MAP: Lazy<HashMap<String, String>> = Lazy::new(create_filename_map);

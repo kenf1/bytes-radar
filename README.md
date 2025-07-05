@@ -12,7 +12,7 @@ A fast code analysis tool for remote repositories with multi-platform support.
 - **Asynchronous Repository Processing**: Non-blocking HTTP client with concurrent stream processing for efficient remote repository fetching and decompression
 - **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
 - **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
-- **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation
+- **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation (use tokei [languages map](https://github.com/XAMPPRocky/tokei/blob/master/languages.json))
 - **Real-time Progress Monitoring**: Features bandwidth-aware progress tracking with download speed calculation, ETA estimation, and adaptive UI rendering for terminal environments
 - **Structured Data Serialization**: Provides multiple output format engines (Table, JSON, CSV, XML) with schema validation and type-safe serialization for integration with external tools
 - **Authentication Layer**: Implements OAuth token management with secure credential handling for accessing private repositories across different hosting platforms
