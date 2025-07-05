@@ -40,6 +40,15 @@ pub enum AnalysisError {
 
     #[error("Aggregation error: {operation}")]
     AggregationError { operation: String },
+
+    #[error("Network error: {message}")]
+    NetworkError { message: String },
+
+    #[error("Archive processing error: {message}")]
+    ArchiveError { message: String },
+
+    #[error("URL parsing error: {url}")]
+    UrlParsingError { url: String },
 }
 
 pub type Result<T> = std::result::Result<T, AnalysisError>;
@@ -92,6 +101,24 @@ impl AnalysisError {
     pub fn aggregation<O: AsRef<str>>(operation: O) -> Self {
         Self::AggregationError {
             operation: operation.as_ref().to_string(),
+        }
+    }
+
+    pub fn network<M: AsRef<str>>(message: M) -> Self {
+        Self::NetworkError {
+            message: message.as_ref().to_string(),
+        }
+    }
+
+    pub fn archive<M: AsRef<str>>(message: M) -> Self {
+        Self::ArchiveError {
+            message: message.as_ref().to_string(),
+        }
+    }
+
+    pub fn url_parsing<U: AsRef<str>>(url: U) -> Self {
+        Self::UrlParsingError {
+            url: url.as_ref().to_string(),
         }
     }
 }
