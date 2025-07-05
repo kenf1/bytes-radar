@@ -32,11 +32,14 @@ pub enum AnalysisError {
     #[error("Configuration error: {message}")]
     ConfigurationError { message: String },
 
-    #[error("Serialization error")]
-    SerializationError {
+    #[error("JSON serialization error")]
+    JsonSerializationError {
         #[from]
         source: serde_json::Error,
     },
+
+    #[error("XML serialization error: {message}")]
+    XmlSerializationError { message: String },
 
     #[error("Aggregation error: {operation}")]
     AggregationError { operation: String },
@@ -119,6 +122,12 @@ impl AnalysisError {
     pub fn url_parsing<U: AsRef<str>>(url: U) -> Self {
         Self::UrlParsingError {
             url: url.as_ref().to_string(),
+        }
+    }
+
+    pub fn xml_serialization<M: AsRef<str>>(message: M) -> Self {
+        Self::XmlSerializationError {
+            message: message.as_ref().to_string(),
         }
     }
 }

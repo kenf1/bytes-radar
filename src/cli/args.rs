@@ -1,0 +1,74 @@
+use clap::{Parser, ValueEnum};
+
+#[derive(Parser)]
+#[command(name = "bytes-radar")]
+#[command(about = "A tool for analyzing code statistics from remote repositories")]
+#[command(version)]
+#[command(long_about = "
+A professional code analysis tool for remote repositories.
+
+SUPPORTED PLATFORMS:
+  - GitHub (github.com)
+  - GitLab (gitlab.com, self-hosted)
+  - Bitbucket (bitbucket.org)
+  - Codeberg (codeberg.org)
+  - SourceForge (sourceforge.net)
+  - Direct tar.gz/tgz URLs
+
+USAGE EXAMPLES:
+  bytes-radar user/repo                    # GitHub repo (default branch)
+  bytes-radar user/repo@master             # GitHub repo with specific branch
+  bytes-radar user/repo@abc123             # GitHub repo with specific commit
+  bytes-radar https://github.com/user/repo # Full GitHub URL
+  bytes-radar https://gitlab.com/user/repo # GitLab URL
+  bytes-radar https://bitbucket.org/user/repo # Bitbucket URL
+  bytes-radar https://example.com/file.tar.gz # Direct tar.gz URL
+  bytes-radar -f json user/repo            # JSON output format
+  bytes-radar --token ghp_xxx user/repo    # With GitHub token for private repos
+")]
+pub struct Cli {
+    #[arg(help = "URL to analyze: user/repo, user/repo@branch, or full URL")]
+    pub url: Option<String>,
+
+    #[arg(short, long, help = "Output format", value_enum)]
+    pub format: Option<OutputFormat>,
+
+    #[arg(long, help = "Show detailed file-by-file statistics")]
+    pub detailed: bool,
+
+    #[arg(short = 'd', long = "debug", help = "Enable debug output")]
+    pub debug: bool,
+
+    #[arg(long, help = "GitHub token for private repositories")]
+    pub token: Option<String>,
+
+    #[arg(long, help = "Request timeout in seconds", default_value = "300")]
+    pub timeout: u64,
+
+    #[arg(long, help = "Allow insecure HTTP connections")]
+    pub allow_insecure: bool,
+
+    #[arg(long, help = "Disable progress bar")]
+    pub no_progress: bool,
+
+    #[arg(long, help = "Quiet mode - minimal output")]
+    pub quiet: bool,
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum OutputFormat {
+    #[value(name = "table")]
+    Table,
+    #[value(name = "json")]
+    Json,
+    #[value(name = "csv")]
+    Csv,
+    #[value(name = "xml")]
+    Xml,
+}
+
+impl Default for OutputFormat {
+    fn default() -> Self {
+        Self::Table
+    }
+}

@@ -10,8 +10,16 @@ use std::io::Read;
 use tar::Archive;
 use tokio::task;
 
+#[cfg(feature = "cli")]
+use indicatif::ProgressBar;
+
 pub struct RemoteAnalyzer {
     client: Client,
+    github_token: Option<String>,
+    timeout: u64,
+    allow_insecure: bool,
+    #[cfg(feature = "cli")]
+    progress_bar: Option<ProgressBar>,
 }
 
 impl RemoteAnalyzer {
@@ -22,34 +30,286 @@ impl RemoteAnalyzer {
             .build()
             .expect("Failed to create HTTP client");
 
-        Self { client }
+        Self {
+            client,
+            github_token: None,
+            timeout: 300,
+            allow_insecure: false,
+            #[cfg(feature = "cli")]
+            progress_bar: None,
+        }
+    }
+
+    #[cfg(feature = "cli")]
+    pub fn set_progress_bar(&mut self, progress_bar: Option<ProgressBar>) {
+        self.progress_bar = progress_bar;
+    }
+
+    pub fn set_github_token(&mut self, token: &str) {
+        self.github_token = Some(token.to_string());
+        self.rebuild_client();
+    }
+
+    pub fn set_timeout(&mut self, timeout: u64) {
+        self.timeout = timeout;
+        self.rebuild_client();
+    }
+
+    pub fn set_allow_insecure(&mut self, allow_insecure: bool) {
+        self.allow_insecure = allow_insecure;
+        self.rebuild_client();
+    }
+
+    fn rebuild_client(&mut self) {
+        let mut builder = Client::builder()
+            .user_agent("bytes-radar/0.1.0")
+            .timeout(std::time::Duration::from_secs(self.timeout));
+
+        if self.allow_insecure {
+            builder = builder.danger_accept_invalid_certs(true);
+        }
+
+        if let Some(token) = &self.github_token {
+            let mut headers = reqwest::header::HeaderMap::new();
+            let auth_value = format!("token {}", token);
+            headers.insert(
+                reqwest::header::AUTHORIZATION,
+                auth_value.parse().expect("Invalid token format"),
+            );
+            builder = builder.default_headers(headers);
+        }
+
+        self.client = builder.build().expect("Failed to create HTTP client");
     }
 
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
-        let download_url = self.resolve_git_url(url)?;
+        let download_url = self.resolve_git_url(url).await?;
         self.analyze_tarball(&download_url).await
     }
 
-    fn resolve_git_url(&self, url: &str) -> Result<String> {
+    async fn resolve_git_url(&self, url: &str) -> Result<String> {
         if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
             return Ok(url.to_string());
         }
 
-        if let Some(github_url) = self.parse_github_url(url) {
+        let branches = ["main", "master", "develop", "dev"];
+
+        if let Some(github_url) = self.parse_github_url_with_branch(url) {
             return Ok(github_url);
         }
 
-        if let Some(gitlab_url) = self.parse_gitlab_url(url) {
+        if let Some(gitlab_url) = self.parse_gitlab_url_with_branch(url) {
             return Ok(gitlab_url);
         }
 
+        if let Some(bitbucket_url) = self.parse_bitbucket_url_with_branch(url) {
+            return Ok(bitbucket_url);
+        }
+
+        if let Some(codeberg_url) = self.parse_codeberg_url_with_branch(url) {
+            return Ok(codeberg_url);
+        }
+
+        for branch in &branches {
+            if let Some(github_url) = self.parse_github_url(url, branch) {
+                if self.check_url_exists(&github_url).await {
+                    return Ok(github_url);
+                }
+            }
+
+            if let Some(gitlab_url) = self.parse_gitlab_url(url, branch) {
+                if self.check_url_exists(&gitlab_url).await {
+                    return Ok(gitlab_url);
+                }
+            }
+
+            if let Some(bitbucket_url) = self.parse_bitbucket_url(url, branch) {
+                if self.check_url_exists(&bitbucket_url).await {
+                    return Ok(bitbucket_url);
+                }
+            }
+
+            if let Some(codeberg_url) = self.parse_codeberg_url(url, branch) {
+                if self.check_url_exists(&codeberg_url).await {
+                    return Ok(codeberg_url);
+                }
+            }
+        }
+
         Err(AnalysisError::url_parsing(format!(
-            "Unsupported URL format: {}. Please provide a direct tar.gz URL or a GitHub/GitLab repository URL.",
+            "Unsupported URL format or no accessible branch found: {}. Please provide a direct tar.gz URL or a supported repository URL.",
             url
         )))
     }
 
-    fn parse_github_url(&self, url: &str) -> Option<String> {
+    fn parse_github_url_with_branch(&self, url: &str) -> Option<String> {
+        if url.contains("github.com") {
+            if url.contains("/tree/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
+                    if tree_pos + 1 < parts.len() && tree_pos >= 2 {
+                        let owner = parts[tree_pos - 2];
+                        let repo = parts[tree_pos - 1];
+                        let branch = parts[tree_pos + 1];
+                        return Some(format!(
+                            "https://github.com/{}/{}/archive/refs/heads/{}.tar.gz",
+                            owner, repo, branch
+                        ));
+                    }
+                }
+            }
+
+            if url.contains("/commit/") {
+                return self.extract_github_commit_url(url);
+            }
+        }
+        None
+    }
+
+    fn parse_gitlab_url_with_branch(&self, url: &str) -> Option<String> {
+        if url.contains("gitlab.com") || url.contains("gitlab.") {
+            if url.contains("/-/tree/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
+                    if tree_pos + 1 < parts.len() && tree_pos >= 3 {
+                        let gitlab_pos = parts.iter().position(|&x| x.contains("gitlab")).unwrap();
+                        let host = parts[gitlab_pos];
+                        let owner = parts[gitlab_pos + 1];
+                        let repo = parts[gitlab_pos + 2];
+                        let branch = parts[tree_pos + 1];
+                        return Some(format!(
+                            "https://{}/{}{}/-/archive/{}/{}-{}.tar.gz",
+                            host,
+                            owner,
+                            if parts.len() > gitlab_pos + 3 && parts[gitlab_pos + 3] != "-" {
+                                format!("/{}", parts[gitlab_pos + 3..tree_pos - 1].join("/"))
+                            } else {
+                                String::new()
+                            },
+                            branch,
+                            repo,
+                            branch
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_bitbucket_url_with_branch(&self, url: &str) -> Option<String> {
+        if url.contains("bitbucket.org") {
+            if url.contains("/commits/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(commits_pos) = parts.iter().position(|&x| x == "commits") {
+                    if commits_pos + 1 < parts.len() && commits_pos >= 2 {
+                        let owner = parts[commits_pos - 2];
+                        let repo = parts[commits_pos - 1];
+                        let commit = parts[commits_pos + 1];
+                        return Some(format!(
+                            "https://bitbucket.org/{}/{}/get/{}.tar.gz",
+                            owner, repo, commit
+                        ));
+                    }
+                }
+            }
+
+            if url.contains("/branch/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(branch_pos) = parts.iter().position(|&x| x == "branch") {
+                    if branch_pos + 1 < parts.len() && branch_pos >= 2 {
+                        let owner = parts[branch_pos - 2];
+                        let repo = parts[branch_pos - 1];
+                        let branch = parts[branch_pos + 1];
+                        return Some(format!(
+                            "https://bitbucket.org/{}/{}/get/{}.tar.gz",
+                            owner, repo, branch
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_codeberg_url_with_branch(&self, url: &str) -> Option<String> {
+        if url.contains("codeberg.org") {
+            if url.contains("/commit/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(commit_pos) = parts.iter().position(|&x| x == "commit") {
+                    if commit_pos + 1 < parts.len() && commit_pos >= 2 {
+                        let owner = parts[commit_pos - 2];
+                        let repo = parts[commit_pos - 1];
+                        let commit = parts[commit_pos + 1];
+                        return Some(format!(
+                            "https://codeberg.org/{}/{}/archive/{}.tar.gz",
+                            owner, repo, commit
+                        ));
+                    }
+                }
+            }
+
+            if url.contains("/src/branch/") {
+                let parts: Vec<&str> = url.split('/').collect();
+                if let Some(branch_pos) = parts.iter().position(|&x| x == "branch") {
+                    if branch_pos + 1 < parts.len() && branch_pos >= 3 {
+                        let owner = parts[branch_pos - 3];
+                        let repo = parts[branch_pos - 2];
+                        let branch = parts[branch_pos + 1];
+                        return Some(format!(
+                            "https://codeberg.org/{}/{}/archive/{}.tar.gz",
+                            owner, repo, branch
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_bitbucket_url(&self, url: &str, branch: &str) -> Option<String> {
+        if url.contains("bitbucket.org") {
+            let parts: Vec<&str> = url.split('/').collect();
+            if let Some(bitbucket_pos) = parts.iter().position(|&x| x == "bitbucket.org") {
+                if bitbucket_pos + 2 < parts.len() {
+                    let owner = parts[bitbucket_pos + 1];
+                    let repo = parts[bitbucket_pos + 2];
+                    return Some(format!(
+                        "https://bitbucket.org/{}/{}/get/{}.tar.gz",
+                        owner, repo, branch
+                    ));
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_codeberg_url(&self, url: &str, branch: &str) -> Option<String> {
+        if url.contains("codeberg.org") {
+            let parts: Vec<&str> = url.split('/').collect();
+            if let Some(codeberg_pos) = parts.iter().position(|&x| x == "codeberg.org") {
+                if codeberg_pos + 2 < parts.len() {
+                    let owner = parts[codeberg_pos + 1];
+                    let repo = parts[codeberg_pos + 2];
+                    return Some(format!(
+                        "https://codeberg.org/{}/{}/archive/{}.tar.gz",
+                        owner, repo, branch
+                    ));
+                }
+            }
+        }
+        None
+    }
+
+    async fn check_url_exists(&self, url: &str) -> bool {
+        if let Ok(response) = self.client.head(url).send().await {
+            response.status().is_success()
+        } else {
+            false
+        }
+    }
+
+    fn parse_github_url(&self, url: &str, branch: &str) -> Option<String> {
         let url = url.trim_end_matches('/');
 
         if url.contains("github.com") {
@@ -57,7 +317,7 @@ impl RemoteAnalyzer {
                 return Some(commit_url);
             }
 
-            if let Some(repo_url) = self.extract_github_repo_url(url) {
+            if let Some(repo_url) = self.extract_github_repo_url(url, branch) {
                 return Some(repo_url);
             }
         }
@@ -83,7 +343,7 @@ impl RemoteAnalyzer {
         None
     }
 
-    fn extract_github_repo_url(&self, url: &str) -> Option<String> {
+    fn extract_github_repo_url(&self, url: &str, branch: &str) -> Option<String> {
         let parts: Vec<&str> = url.split('/').collect();
         if parts.len() >= 2 && parts.contains(&"github.com") {
             if let Some(github_pos) = parts.iter().position(|&x| x == "github.com") {
@@ -91,8 +351,8 @@ impl RemoteAnalyzer {
                     let owner = parts[github_pos + 1];
                     let repo = parts[github_pos + 2];
                     return Some(format!(
-                        "https://github.com/{}/{}/archive/refs/heads/main.tar.gz",
-                        owner, repo
+                        "https://github.com/{}/{}/archive/refs/heads/{}.tar.gz",
+                        owner, repo, branch
                     ));
                 }
             }
@@ -100,7 +360,7 @@ impl RemoteAnalyzer {
         None
     }
 
-    fn parse_gitlab_url(&self, url: &str) -> Option<String> {
+    fn parse_gitlab_url(&self, url: &str, branch: &str) -> Option<String> {
         let url = url.trim_end_matches('/');
 
         if url.contains("gitlab.com") || url.contains("gitlab.") {
@@ -111,7 +371,7 @@ impl RemoteAnalyzer {
                     let owner = parts[gitlab_pos + 1];
                     let repo = parts[gitlab_pos + 2];
                     return Some(format!(
-                        "https://{}/{}{}/-/archive/main/{}-main.tar.gz",
+                        "https://{}/{}{}/-/archive/{}/{}-{}.tar.gz",
                         host,
                         owner,
                         if parts.len() > gitlab_pos + 3 {
@@ -119,7 +379,9 @@ impl RemoteAnalyzer {
                         } else {
                             String::new()
                         },
-                        repo
+                        branch,
+                        repo,
+                        branch
                     ));
                 }
             }
@@ -146,13 +408,42 @@ impl RemoteAnalyzer {
             )));
         }
 
+        let total_size = response.content_length().unwrap_or(0);
+
+        #[cfg(feature = "cli")]
+        if let Some(pb) = &self.progress_bar {
+            if total_size > 0 {
+                pb.set_length(total_size);
+                pb.set_message("Downloading...");
+            } else {
+                pb.set_message("Downloading (unknown size)...");
+            }
+        }
+
         let mut stream = response.bytes_stream();
         let mut buffer = Vec::new();
+        let mut downloaded = 0u64;
 
         while let Some(chunk) = stream.next().await {
             let chunk =
                 chunk.map_err(|e| AnalysisError::network(format!("Stream error: {}", e)))?;
+
+            downloaded += chunk.len() as u64;
             buffer.extend_from_slice(&chunk);
+
+            #[cfg(feature = "cli")]
+            if let Some(pb) = &self.progress_bar {
+                if total_size > 0 {
+                    pb.set_position(downloaded);
+                } else {
+                    pb.set_message(format!("Downloaded {} bytes...", downloaded));
+                }
+            }
+        }
+
+        #[cfg(feature = "cli")]
+        if let Some(pb) = &self.progress_bar {
+            pb.set_message("Processing archive...");
         }
 
         self.process_tarball_data(&buffer, &mut project_analysis)
@@ -334,13 +625,33 @@ mod tests {
         let analyzer = RemoteAnalyzer::new();
 
         assert_eq!(
-            analyzer.parse_github_url("https://github.com/user/repo"),
+            analyzer.parse_github_url("https://github.com/user/repo", "main"),
             Some("https://github.com/user/repo/archive/refs/heads/main.tar.gz".to_string())
         );
 
         assert_eq!(
-            analyzer.parse_github_url("https://github.com/user/repo/commit/abc123"),
+            analyzer.parse_github_url("https://github.com/user/repo/commit/abc123", "main"),
             Some("https://github.com/user/repo/archive/abc123.tar.gz".to_string())
+        );
+    }
+
+    #[test]
+    fn test_bitbucket_url_parsing() {
+        let analyzer = RemoteAnalyzer::new();
+
+        assert_eq!(
+            analyzer.parse_bitbucket_url("https://bitbucket.org/user/repo", "main"),
+            Some("https://bitbucket.org/user/repo/get/main.tar.gz".to_string())
+        );
+    }
+
+    #[test]
+    fn test_codeberg_url_parsing() {
+        let analyzer = RemoteAnalyzer::new();
+
+        assert_eq!(
+            analyzer.parse_codeberg_url("https://codeberg.org/user/repo", "main"),
+            Some("https://codeberg.org/user/repo/archive/main.tar.gz".to_string())
         );
     }
 
