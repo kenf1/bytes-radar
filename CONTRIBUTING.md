@@ -182,8 +182,6 @@ bytes-radar/
 │   ├── core/            # Core analysis logic
 │   └── lib.rs           # Library entry point
 ├── tests/               # Integration tests
-├── benches/             # Benchmarks
-├── docs/                # Additional documentation
 └── examples/            # Usage examples
 ```
 
@@ -248,10 +246,6 @@ Contributors are recognized in:
 - Repository contributors page
 - Release notes for significant contributions
 - README acknowledgments section
-
-## Code of Conduct
-
-Please note that this project follows a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
 ## License
 

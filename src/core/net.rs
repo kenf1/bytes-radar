@@ -6,9 +6,12 @@ use crate::core::{
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use reqwest::Client;
-use std::io::Read;
+use std::io::{Cursor, Read};
+use std::pin::Pin;
 use tar::Archive;
 use tokio::task;
+
+static USER_AGENT: &str = "bytes-radar/0.2.0";
 
 #[cfg(feature = "cli")]
 use indicatif::ProgressBar;
@@ -25,7 +28,7 @@ pub struct RemoteAnalyzer {
 impl RemoteAnalyzer {
     pub fn new() -> Self {
         let client = Client::builder()
-            .user_agent("bytes-radar/0.1.0")
+            .user_agent(USER_AGENT)
             .timeout(std::time::Duration::from_secs(300))
             .build()
             .expect("Failed to create HTTP client");
@@ -62,7 +65,7 @@ impl RemoteAnalyzer {
 
     fn rebuild_client(&mut self) {
         let mut builder = Client::builder()
-            .user_agent("bytes-radar/0.1.0")
+            .user_agent(USER_AGENT)
             .timeout(std::time::Duration::from_secs(self.timeout));
 
         if self.allow_insecure {
@@ -428,11 +431,11 @@ impl RemoteAnalyzer {
             )));
         }
 
-        let total_size = response.content_length().unwrap_or(0);
+        let total_size = response.content_length();
 
         #[cfg(feature = "cli")]
         if let Some(pb) = &self.progress_bar {
-            if total_size > 0 {
+            if let Some(size) = total_size {
                 use indicatif::ProgressStyle;
                 pb.set_style(
                     ProgressStyle::default_bar()
@@ -440,75 +443,75 @@ impl RemoteAnalyzer {
                         .unwrap_or_else(|_| ProgressStyle::default_bar())
                         .progress_chars("#>-"),
                 );
-                pb.set_length(total_size);
-                pb.set_message("Downloading...");
+                pb.set_length(size);
+                pb.set_message("Downloading and processing...");
             } else {
-                pb.set_message("Downloading...");
+                pb.set_message("Downloading and processing...");
                 pb.enable_steady_tick(std::time::Duration::from_millis(120));
             }
         }
 
-        let mut stream = response.bytes_stream();
-        let mut buffer = Vec::new();
-        let mut downloaded = 0u64;
-
-        while let Some(chunk) = stream.next().await {
-            let chunk =
-                chunk.map_err(|e| AnalysisError::network(format!("Stream error: {}", e)))?;
-
-            downloaded += chunk.len() as u64;
-            buffer.extend_from_slice(&chunk);
-
+        let stream = response.bytes_stream();
+        let mut stream_reader = StreamReader::new(
+            stream,
             #[cfg(feature = "cli")]
-            if let Some(pb) = &self.progress_bar {
-                if total_size > 0 {
-                    pb.set_position(downloaded);
-                } else {
-                    let formatted = Self::format_bytes_simple(downloaded);
-                    pb.set_message(format!("Downloaded {}...", formatted));
-                }
-            }
-        }
+            self.progress_bar.clone(),
+            total_size,
+        );
 
         #[cfg(feature = "cli")]
         if let Some(pb) = &self.progress_bar {
             pb.set_message("Processing archive...");
         }
 
-        self.process_tarball_data(&buffer, &mut project_analysis)
+        stream_reader
+            .collect_all_data()
+            .await
+            .map_err(|e| AnalysisError::network(format!("Failed to collect stream data: {}", e)))?;
+
+        self.process_tarball_stream(stream_reader, &mut project_analysis)
             .await?;
         Ok(project_analysis)
     }
 
-    async fn process_tarball_data(
+    async fn process_tarball_stream(
         &self,
-        data: &[u8],
+        stream_reader: StreamReader,
         project_analysis: &mut ProjectAnalysis,
     ) -> Result<()> {
-        let decoder = GzDecoder::new(data);
-        let mut archive = Archive::new(decoder);
+        let metrics_result = task::spawn_blocking(move || {
+            let decoder = GzDecoder::new(stream_reader);
+            let mut archive = Archive::new(decoder);
 
-        let entries = archive
-            .entries()
-            .map_err(|e| AnalysisError::archive(format!("Failed to read tar entries: {}", e)))?;
+            let entries = archive.entries().map_err(|e| {
+                AnalysisError::archive(format!("Failed to read tar entries: {}", e))
+            })?;
 
-        for entry in entries {
-            let entry = entry
-                .map_err(|e| AnalysisError::archive(format!("Failed to read tar entry: {}", e)))?;
+            let mut collected_metrics = Vec::new();
 
-            if let Err(_) = self.process_tar_entry(entry, project_analysis).await {
-                continue;
+            for entry in entries {
+                let entry = entry.map_err(|e| {
+                    AnalysisError::archive(format!("Failed to read tar entry: {}", e))
+                })?;
+
+                if let Ok(metrics) = Self::process_tar_entry_sync(entry) {
+                    collected_metrics.push(metrics);
+                }
             }
+
+            Ok::<Vec<FileMetrics>, AnalysisError>(collected_metrics)
+        })
+        .await
+        .map_err(|e| AnalysisError::archive(format!("Task join error: {}", e)))??;
+
+        for metrics in metrics_result {
+            project_analysis.add_file_metrics(metrics)?;
         }
 
         Ok(())
     }
 
-    async fn process_tar_entry<R: Read>(
-        &self,
-        mut entry: tar::Entry<'_, R>,
-        project_analysis: &mut ProjectAnalysis,
-    ) -> Result<()> {
+    fn process_tar_entry_sync<R: Read>(mut entry: tar::Entry<'_, R>) -> Result<FileMetrics> {
         let header = entry.header();
         let path = header
             .path()
@@ -517,7 +520,7 @@ impl RemoteAnalyzer {
         let file_path = path.to_string_lossy().to_string();
 
         if !header.entry_type().is_file() || header.size().unwrap_or(0) == 0 {
-            return Ok(());
+            return Err(AnalysisError::archive("Not a file or empty".to_string()));
         }
 
         let file_size = header.size().unwrap_or(0);
@@ -527,17 +530,12 @@ impl RemoteAnalyzer {
 
         let mut content = String::new();
         if entry.read_to_string(&mut content).is_err() {
-            return Ok(());
+            return Err(AnalysisError::archive(
+                "Failed to read file content".to_string(),
+            ));
         }
 
-        let metrics = task::spawn_blocking(move || {
-            analyze_file_content(&file_path, &content, &language, file_size)
-        })
-        .await
-        .map_err(|e| AnalysisError::archive(format!("Task join error: {}", e)))??;
-
-        project_analysis.add_file_metrics(metrics)?;
-        Ok(())
+        analyze_file_content(&file_path, &content, &language, file_size)
     }
 
     fn extract_project_name_from_original(&self, url: &str) -> String {
@@ -765,5 +763,83 @@ mod tests {
             analyzer.extract_project_name("https://github.com/user/repo/archive/main.tar.gz"),
             "main"
         );
+    }
+}
+
+struct StreamReader {
+    inner: Pin<Box<dyn futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + Send>>,
+    current_chunk: Option<Cursor<bytes::Bytes>>,
+    #[cfg(feature = "cli")]
+    progress_bar: Option<ProgressBar>,
+    downloaded: u64,
+    total_size: Option<u64>,
+    buffer: Vec<u8>,
+}
+
+impl StreamReader {
+    fn new(
+        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + Send + 'static,
+        #[cfg(feature = "cli")] progress_bar: Option<ProgressBar>,
+        total_size: Option<u64>,
+    ) -> Self {
+        Self {
+            inner: Box::pin(stream),
+            current_chunk: None,
+            #[cfg(feature = "cli")]
+            progress_bar,
+            downloaded: 0,
+            total_size,
+            buffer: Vec::new(),
+        }
+    }
+
+    async fn collect_all_data(&mut self) -> std::io::Result<()> {
+        while let Some(chunk_result) = self.inner.next().await {
+            match chunk_result {
+                Ok(chunk) => {
+                    self.downloaded += chunk.len() as u64;
+                    self.buffer.extend_from_slice(&chunk);
+
+                    #[cfg(feature = "cli")]
+                    if let Some(pb) = &self.progress_bar {
+                        if let Some(_total) = self.total_size {
+                            pb.set_position(self.downloaded);
+                        } else {
+                            let formatted = RemoteAnalyzer::format_bytes_simple(self.downloaded);
+                            pb.set_message(format!("Downloaded {}...", formatted));
+                        }
+                    }
+                }
+                Err(e) => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Stream error: {}", e),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Read for StreamReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if let Some(ref mut cursor) = self.current_chunk {
+            let read = cursor.read(buf)?;
+            if read > 0 {
+                return Ok(read);
+            }
+            self.current_chunk = None;
+        }
+
+        if !self.buffer.is_empty() {
+            let chunk = std::mem::take(&mut self.buffer);
+            self.current_chunk = Some(Cursor::new(bytes::Bytes::from(chunk)));
+            if let Some(ref mut cursor) = self.current_chunk {
+                return cursor.read(buf);
+            }
+        }
+
+        Ok(0)
     }
 }
