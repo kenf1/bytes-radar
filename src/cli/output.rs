@@ -1,7 +1,6 @@
 use super::progress::format_number;
 use crate::core::{analysis::ProjectAnalysis, error::Result};
 use colored::Colorize;
-use serde_xml_rs;
 
 pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, quiet: bool) {
     let summary = project_analysis.get_summary();
@@ -159,71 +158,82 @@ pub fn print_csv_format(project_analysis: &ProjectAnalysis) -> Result<()> {
 }
 
 pub fn print_xml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
-    #[derive(serde::Serialize)]
-    struct XmlProjectAnalysis {
-        project_name: String,
-        summary: XmlSummary,
-        language_statistics: Vec<XmlLanguageStats>,
-    }
-
-    #[derive(serde::Serialize)]
-    struct XmlSummary {
-        total_files: usize,
-        total_lines: usize,
-        total_code_lines: usize,
-        total_comment_lines: usize,
-        total_blank_lines: usize,
-        language_count: usize,
-        primary_language: Option<String>,
-        overall_complexity_ratio: f64,
-        overall_documentation_ratio: f64,
-    }
-
-    #[derive(serde::Serialize)]
-    struct XmlLanguageStats {
-        language_name: String,
-        file_count: usize,
-        total_lines: usize,
-        code_lines: usize,
-        comment_lines: usize,
-        blank_lines: usize,
-        complexity_ratio: f64,
-    }
-
     let summary = project_analysis.get_summary();
     let language_stats = project_analysis.get_language_statistics();
 
-    let xml_data = XmlProjectAnalysis {
-        project_name: summary.project_name.clone(),
-        summary: XmlSummary {
-            total_files: summary.total_files,
-            total_lines: summary.total_lines,
-            total_code_lines: summary.total_code_lines,
-            total_comment_lines: summary.total_comment_lines,
-            total_blank_lines: summary.total_blank_lines,
-            language_count: summary.language_count,
-            primary_language: summary.primary_language.clone(),
-            overall_complexity_ratio: summary.overall_complexity_ratio,
-            overall_documentation_ratio: summary.overall_documentation_ratio,
-        },
-        language_statistics: language_stats
-            .iter()
-            .map(|stats| XmlLanguageStats {
-                language_name: stats.language_name.clone(),
-                file_count: stats.file_count,
-                total_lines: stats.total_lines,
-                code_lines: stats.code_lines,
-                comment_lines: stats.comment_lines,
-                blank_lines: stats.blank_lines,
-                complexity_ratio: stats.complexity_ratio,
-            })
-            .collect(),
-    };
-
-    let xml = serde_xml_rs::to_string(&xml_data)
-        .map_err(|e| crate::core::error::AnalysisError::xml_serialization(e.to_string()))?;
-
     println!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-    println!("{}", xml);
+    println!("<project_analysis>");
+
+    println!(
+        "  <project_name>{}</project_name>",
+        xml_escape(&summary.project_name)
+    );
+
+    println!("  <summary>");
+    println!("    <total_files>{}</total_files>", summary.total_files);
+    println!("    <total_lines>{}</total_lines>", summary.total_lines);
+    println!(
+        "    <total_code_lines>{}</total_code_lines>",
+        summary.total_code_lines
+    );
+    println!(
+        "    <total_comment_lines>{}</total_comment_lines>",
+        summary.total_comment_lines
+    );
+    println!(
+        "    <total_blank_lines>{}</total_blank_lines>",
+        summary.total_blank_lines
+    );
+    println!(
+        "    <language_count>{}</language_count>",
+        summary.language_count
+    );
+
+    if let Some(ref primary_lang) = summary.primary_language {
+        println!(
+            "    <primary_language>{}</primary_language>",
+            xml_escape(primary_lang)
+        );
+    }
+
+    println!(
+        "    <overall_complexity_ratio>{:.6}</overall_complexity_ratio>",
+        summary.overall_complexity_ratio
+    );
+    println!(
+        "    <overall_documentation_ratio>{:.6}</overall_documentation_ratio>",
+        summary.overall_documentation_ratio
+    );
+    println!("  </summary>");
+
+    println!("  <language_statistics>");
+    for stats in language_stats {
+        println!("    <language>");
+        println!("      <name>{}</name>", xml_escape(&stats.language_name));
+        println!("      <file_count>{}</file_count>", stats.file_count);
+        println!("      <total_lines>{}</total_lines>", stats.total_lines);
+        println!("      <code_lines>{}</code_lines>", stats.code_lines);
+        println!(
+            "      <comment_lines>{}</comment_lines>",
+            stats.comment_lines
+        );
+        println!("      <blank_lines>{}</blank_lines>", stats.blank_lines);
+        println!(
+            "      <complexity_ratio>{:.6}</complexity_ratio>",
+            stats.complexity_ratio
+        );
+        println!("    </language>");
+    }
+    println!("  </language_statistics>");
+
+    println!("</project_analysis>");
     Ok(())
+}
+
+fn xml_escape(text: &str) -> String {
+    text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&apos;")
 }
