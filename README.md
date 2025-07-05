@@ -1,4 +1,4 @@
-# bytes-radar
+# Bytes Radar
 
 [![CI](https://github.com/zmh-program/bytes-radar/workflows/CI/badge.svg)](https://github.com/zmh-program/bytes-radar/actions)
 [![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
@@ -9,7 +9,7 @@ A fast code analysis tool for remote repositories with multi-platform support.
 
 ## Features
 
-- **Asynchronous Repository Processing**: Implements non-blocking HTTP client with connection pooling and concurrent stream processing for efficient remote repository fetching and decompression
+- **Asynchronous Repository Processing**: Non-blocking HTTP client with concurrent stream processing for efficient remote repository fetching and decompression
 - **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
 - **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
 - **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation
@@ -188,25 +188,6 @@ OPTIONS:
       --quiet                 Quiet mode - minimal output
   -h, --help                  Print help
   -V, --version               Print version
-```
-
-## Architecture
-
-bytes-radar is built with a modular architecture:
-
-```
-src/
-├── cli/                 # Command-line interface
-│   ├── args.rs         # Argument parsing
-│   ├── output.rs       # Output formatting
-│   ├── progress.rs     # Progress bar handling
-│   └── url_parser.rs   # URL processing
-├── core/               # Core analysis logic
-│   ├── analysis.rs     # File analysis
-│   ├── net.rs         # Network operations
-│   ├── registry.rs    # Language detection
-│   └── error.rs       # Error handling
-└── lib.rs             # Library entry point
 ```
 
 ## Contributing

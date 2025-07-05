@@ -100,12 +100,11 @@ impl RemoteAnalyzer {
                 && !url.contains("bitbucket.org")
                 && !url.contains("codeberg.org")
             {
-                let tarball_url = if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
-                    url.to_string()
+                if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
+                    return Ok(url.to_string());
                 } else {
-                    format!("{}.tar.gz", url)
-                };
-                return Ok(tarball_url);
+                    return Ok(url.to_string());
+                }
             }
         }
 
