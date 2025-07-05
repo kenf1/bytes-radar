@@ -2,17 +2,16 @@
 
 Thank you for your interest in contributing to bytes-radar! This document provides guidelines and information for contributors.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
 - Rust 1.70 or later
 - Git
-- A GitHub account
 
 ### Development Setup
 
-1. **Fork the repository** on GitHub
+1. **Fork the repository**
 
 2. **Clone your fork**:
    ```bash
@@ -22,48 +21,37 @@ Thank you for your interest in contributing to bytes-radar! This document provid
 
 3. **Set up the development environment**:
    ```bash
-   # Install dependencies
    cargo build
-   
-   # Run tests to ensure everything works
    cargo test --all-features
    ```
 
-4. **Create a new branch** for your feature or fix:
+4. **Create a new branch**:
    ```bash
    git checkout -b feature/my-new-feature
-   # or
    git checkout -b fix/issue-123
    ```
 
-## 🔧 Development Workflow
+## Development Workflow
 
 ### Code Style
 
 We use standard Rust formatting and linting tools:
 
 ```bash
-# Format code
 cargo fmt
-
-# Check linting
 cargo clippy --all-targets --all-features -- -D warnings
-
-# Run tests
 cargo test --all-features
-
-# Run tests without default features
 cargo test --no-default-features
 ```
 
 ### Commit Messages
 
-We follow conventional commit format:
+Follow conventional commit format:
 
 - `feat:` - New features
 - `fix:` - Bug fixes
 - `docs:` - Documentation changes
-- `style:` - Code style changes (formatting, etc.)
+- `style:` - Code style changes
 - `refactor:` - Code refactoring
 - `test:` - Adding or updating tests
 - `chore:` - Maintenance tasks
@@ -79,23 +67,17 @@ docs: update installation instructions
 
 - Write tests for new functionality
 - Ensure all existing tests pass
-- Test on multiple platforms when possible
 - Include integration tests for new features
 
 ```bash
-# Run all tests
 cargo test --all-features
-
-# Run specific test
 cargo test test_name
-
-# Run tests with output
 cargo test -- --nocapture
 ```
 
-## 📝 Types of Contributions
+## Types of Contributions
 
-### 🐛 Bug Reports
+### Bug Reports
 
 When filing a bug report, please include:
 
@@ -105,7 +87,7 @@ When filing a bug report, please include:
 - System information (OS, Rust version, bytes-radar version)
 - Command used and full output
 
-### ✨ Feature Requests
+### Feature Requests
 
 For feature requests, please include:
 
@@ -114,7 +96,7 @@ For feature requests, please include:
 - Possible implementation approaches
 - Any breaking changes
 
-### 🔧 Code Contributions
+### Code Contributions
 
 #### Adding New Platform Support
 
@@ -143,7 +125,7 @@ For performance improvements:
 3. Ensure no functionality is broken
 4. Test on different repository sizes
 
-## 🧪 Testing Guidelines
+## Testing Guidelines
 
 ### Unit Tests
 
@@ -161,14 +143,11 @@ For performance improvements:
 ### Performance Tests
 
 ```bash
-# Run benchmarks
 cargo bench
-
-# Profile specific operations
 cargo run --release -- user/small-repo
 ```
 
-## 📚 Documentation
+## Documentation
 
 ### Code Documentation
 
@@ -184,7 +163,7 @@ cargo run --release -- user/small-repo
 - Update CLI help text
 - Keep installation instructions current
 
-## 🚀 Release Process
+## Release Process
 
 Releases are handled by maintainers:
 
@@ -193,7 +172,7 @@ Releases are handled by maintainers:
 3. Create git tag
 4. GitHub Actions builds and publishes
 
-## 🏛️ Project Structure
+## Project Structure
 
 ```
 bytes-radar/
@@ -208,7 +187,7 @@ bytes-radar/
 └── examples/            # Usage examples
 ```
 
-## 🎯 Areas for Contribution
+## Areas for Contribution
 
 We welcome contributions in these areas:
 
@@ -229,15 +208,14 @@ We welcome contributions in these areas:
 - Minor feature additions
 - Example improvements
 
-## 💬 Getting Help
+## Getting Help
 
 If you need help:
 
 - Check existing [issues](https://github.com/zmh-program/bytes-radar/issues)
 - Start a [discussion](https://github.com/zmh-program/bytes-radar/discussions)
-- Join our community channels (if available)
 
-## 📋 Pull Request Process
+## Pull Request Process
 
 1. **Before submitting**:
    - Fork the repository
@@ -263,7 +241,7 @@ If you need help:
    - Documentation updated
    - No breaking changes (unless discussed)
 
-## 🏆 Recognition
+## Recognition
 
 Contributors are recognized in:
 
@@ -271,14 +249,14 @@ Contributors are recognized in:
 - Release notes for significant contributions
 - README acknowledgments section
 
-## 📜 Code of Conduct
+## Code of Conduct
 
 Please note that this project follows a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
-## 📄 License
+## License
 
 By contributing to bytes-radar, you agree that your contributions will be licensed under the Apache License 2.0.
 
 ---
 
-Thank you for contributing to bytes-radar! 🎉 
+Thank you for contributing to bytes-radar! 

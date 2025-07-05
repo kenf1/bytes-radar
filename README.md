@@ -1,42 +1,32 @@
-# bytes-radar 📊
+# bytes-radar
 
 [![CI](https://github.com/zmh-program/bytes-radar/workflows/CI/badge.svg)](https://github.com/zmh-program/bytes-radar/actions)
 [![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 
-A hyper-fast code analysis tool for remote repositories with professional output and multi-platform support.
+A fast code analysis tool for remote repositories with multi-platform support.
 
-## ✨ Features
+## Features
 
-- **🚀 Lightning Fast**: Blazing fast analysis of remote repositories
-- **🌐 Multi-Platform Support**: GitHub, GitLab, Bitbucket, Codeberg, and more
-- **📊 Multiple Output Formats**: Table, JSON, CSV, and XML
-- **🔧 Professional CLI**: Clean, tokei-inspired interface
-- **📈 Progress Tracking**: Smart progress bars with download speed
-- **🔒 Private Repositories**: Token-based authentication support
-- **📱 Cross-Platform**: Linux, macOS, and Windows support
+- Fast analysis of remote repositories
+- Multi-platform support: GitHub, GitLab, Bitbucket, Codeberg
+- Multiple output formats: Table, JSON, CSV, XML
+- Progress tracking with download speed
+- Token-based authentication for private repositories
+- Cross-platform: Linux, macOS, Windows
 
-## 🛠️ Installation
+## Installation
 
-### From Releases (Recommended)
-
-Download the latest binary from [GitHub Releases](https://github.com/zmh-program/bytes-radar/releases):
-
-```bash
-# Linux/macOS
-curl -L https://github.com/zmh-program/bytes-radar/releases/latest/download/bytes-radar-linux-x86_64 -o bytes-radar
-chmod +x bytes-radar
-
-# Windows
-# Download bytes-radar-windows-x86_64.exe from releases
-```
-
-### From Cargo
+### From Cargo (Recommended)
 
 ```bash
 cargo install bytes-radar
 ```
+
+### From Releases
+
+Download the latest binary from [GitHub Releases](https://github.com/zmh-program/bytes-radar/releases)
 
 ### From Source
 
@@ -46,39 +36,43 @@ cd bytes-radar
 cargo build --release
 ```
 
-## 🚀 Quick Start
+## Usage
 
 ```bash
-# Analyze a GitHub repository
+bytes-radar [OPTIONS] <URL>
+```
+
+### Examples
+
+```bash
+# GitHub repository
 bytes-radar torvalds/linux
 
-# Analyze with specific branch
+# Specific branch or commit
 bytes-radar microsoft/vscode@main
-
-# Analyze with commit hash
 bytes-radar rust-lang/rust@abc1234
 
-# Multiple platforms
+# Other platforms
 bytes-radar https://gitlab.com/user/repo
 bytes-radar https://bitbucket.org/user/repo
-bytes-radar https://codeberg.org/user/repo
 
-# JSON output
+# Output formats
 bytes-radar -f json torvalds/linux
+bytes-radar -f csv user/repo
 
-# With authentication token
+# Private repositories
 bytes-radar --token ghp_xxx private/repo
 
-# Quiet mode (minimal output)
+# Minimal output
 bytes-radar --quiet user/repo
 ```
 
-## 📊 Output Formats
+## Output Formats
 
 ### Table (Default)
 ```
 ================================================================================
- Project                                                  linux@main
+ Project                                                  linux@master
  Total Files                                              75,823
  Total Lines                                              28,691,744
  Code Lines                                               22,453,891
@@ -99,7 +93,7 @@ bytes-radar --quiet user/repo
 ### JSON Output
 ```json
 {
-  "project_name": "linux@main",
+  "project_name": "linux@master",
   "summary": {
     "total_files": 75823,
     "total_lines": 28691744,
@@ -111,7 +105,7 @@ bytes-radar --quiet user/repo
 }
 ```
 
-## 🌐 Supported Platforms
+## Supported Platforms
 
 | Platform | URL Format | Example |
 |----------|------------|---------|
@@ -121,7 +115,7 @@ bytes-radar --quiet user/repo
 | **Codeberg** | Full URL | `https://codeberg.org/user/repo` |
 | **Direct** | tar.gz URL | `https://example.com/file.tar.gz` |
 
-## 🔧 CLI Options
+## CLI Options
 
 ```bash
 bytes-radar [OPTIONS] <URL>
@@ -142,7 +136,7 @@ OPTIONS:
   -V, --version               Print version
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 bytes-radar is built with a modular architecture:
 
@@ -161,7 +155,7 @@ src/
 └── lib.rs             # Library entry point
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -182,43 +176,9 @@ cargo test --all-features
 cargo fmt
 
 # Lint code
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --all-targets --all-features
 ```
 
-## 📈 Performance
+## Acknowledgments
 
-bytes-radar is designed for speed:
-
-- **Streaming Downloads**: Memory-efficient streaming with progress tracking
-- **Parallel Processing**: Multi-threaded file analysis
-- **Smart Caching**: Efficient dependency caching
-- **Optimized Parsing**: Fast language detection and line counting
-
-## 🐛 Bug Reports
-
-Found a bug? Please report it on our [issue tracker](https://github.com/zmh-program/bytes-radar/issues) with:
-
-- Command used
-- Expected vs actual output
-- Operating system and version
-- bytes-radar version
-
-## 📄 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Inspired by [tokei](https://github.com/XAMPPRocky/tokei) for clean CLI design
-- Built with ❤️ using [Rust](https://www.rust-lang.org/)
-
-## 🔗 Links
-
-- [Crates.io](https://crates.io/crates/bytes-radar)
-- [Documentation](https://docs.rs/bytes-radar)
-- [Changelog](CHANGELOG.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
-
----
-
-**Made with ❤️ by [zmh-program](https://github.com/zmh-program)** 
+- Inspired by [tokei](https://github.com/XAMPPRocky/tokei)
