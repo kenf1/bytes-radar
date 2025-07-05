@@ -93,6 +93,22 @@ impl RemoteAnalyzer {
             return Ok(url.to_string());
         }
 
+        if url.starts_with("http://") || url.starts_with("https://") {
+            if !url.contains("github.com")
+                && !url.contains("gitlab.com")
+                && !url.contains("gitlab.")
+                && !url.contains("bitbucket.org")
+                && !url.contains("codeberg.org")
+            {
+                let tarball_url = if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
+                    url.to_string()
+                } else {
+                    format!("{}.tar.gz", url)
+                };
+                return Ok(tarball_url);
+            }
+        }
+
         let branches = ["main", "master", "develop", "dev"];
 
         if let Some(github_url) = self.parse_github_url_with_branch(url) {

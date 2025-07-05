@@ -9,12 +9,14 @@ A fast code analysis tool for remote repositories with multi-platform support.
 
 ## Features
 
-- Fast analysis of remote repositories
-- Multi-platform support: GitHub, GitLab, Bitbucket, Codeberg
-- Multiple output formats: Table, JSON, CSV, XML
-- Progress tracking with download speed
-- Token-based authentication for private repositories
-- Cross-platform: Linux, macOS, Windows
+- **Asynchronous Repository Processing**: Implements non-blocking HTTP client with connection pooling and concurrent stream processing for efficient remote repository fetching and decompression
+- **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
+- **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
+- **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation
+- **Real-time Progress Monitoring**: Features bandwidth-aware progress tracking with download speed calculation, ETA estimation, and adaptive UI rendering for terminal environments
+- **Structured Data Serialization**: Provides multiple output format engines (Table, JSON, CSV, XML) with schema validation and type-safe serialization for integration with external tools
+- **Authentication Layer**: Implements OAuth token management with secure credential handling for accessing private repositories across different hosting platforms
+- **Cross-Platform Binary Distribution**: Supports native compilation targets for Linux, macOS, and Windows with platform-specific optimizations and dependency management
 
 ## Installation
 
@@ -44,50 +46,102 @@ bytes-radar [OPTIONS] <URL>
 
 ### Examples
 
+#### Basic Repository Analysis
+
+Analyze GitHub repositories using shorthand notation:
+
 ```bash
-# GitHub repository
 bytes-radar torvalds/linux
+bytes-radar microsoft/typescript
+bytes-radar rust-lang/cargo
+```
 
-# Specific branch or commit
+#### Branch and Commit Targeting
+
+Specify particular branches or commit hashes for analysis:
+
+```bash
 bytes-radar microsoft/vscode@main
-bytes-radar rust-lang/rust@abc1234
+bytes-radar kubernetes/kubernetes@release-1.28
+bytes-radar rust-lang/rust@abc1234567
+```
 
-# Other platforms
-bytes-radar https://gitlab.com/user/repo
-bytes-radar https://bitbucket.org/user/repo
+#### Multi-Platform Repository Support
 
-# Output formats
+Analyze repositories from different Git hosting platforms:
+
+```bash
+bytes-radar https://gitlab.com/gitlab-org/gitlab
+bytes-radar https://bitbucket.org/atlassian/stash
+bytes-radar https://codeberg.org/forgejo/forgejo
+```
+
+#### Output Format Configuration
+
+Generate analysis results in structured data formats:
+
+```bash
 bytes-radar -f json torvalds/linux
-bytes-radar -f csv user/repo
+bytes-radar -f csv microsoft/typescript
+bytes-radar -f xml rust-lang/cargo
+```
 
-# Private repositories
-bytes-radar --token ghp_xxx private/repo
+#### Private Repository Access
 
-# Minimal output
-bytes-radar --quiet user/repo
+Authenticate with platform tokens for private repository analysis:
+
+```bash
+bytes-radar --token ghp_xxxxxxxxxxxxxxxxxxxx private-org/confidential-repo
+bytes-radar --token glpat-xxxxxxxxxxxxxxxxxxxx https://gitlab.com/private-group/project
+```
+
+#### Performance and Output Control
+
+Configure analysis behavior and output verbosity:
+
+```bash
+bytes-radar --quiet --no-progress user/repo
+bytes-radar --timeout 600 --detailed large-org/massive-repo
 ```
 
 ## Output Formats
 
 ### Table (Default)
-```
+```shell
+$ bytes-radar torvalds/linux
+Analyzing: https://github.com/torvalds/linux
+Analysis completed in 126.36s
+
 ================================================================================
- Project                                                  linux@master
- Total Files                                              75,823
- Total Lines                                              28,691,744
- Code Lines                                               22,453,891
- Comment Lines                                            3,891,234
- Blank Lines                                              2,346,619
- Languages                                                42
+ Project                                                  linux@main
+ Total Files                                              89,639
+ Total Lines                                              40,876,027
+ Code Lines                                               31,293,116
+ Comment Lines                                            4,433,479
+ Blank Lines                                              5,149,432
+ Languages                                                14
  Primary Language                                         C
- Code Ratio                                               78.3%
- Documentation                                            13.6%
+ Code Ratio                                               76.6%
+ Documentation                                            14.2%
 ================================================================================
- Language             Files        Lines     Code     Comments    Blanks   Share%
+ Language                Files        Lines     Code   Comments   Blanks   Share%
 ================================================================================
- C                   14,523   18,234,567   15,234   1,234,567   1,765,766    63.6%
- Assembly             2,341    3,456,789    2,891      234,567     321,331    12.0%
- ...
+ C                      35,586   25,268,107 18,782,347  2,836,806 3,648,954    61.8%
+ CHeader                25,845   10,247,647 7,953,679  1,528,043  765,925    25.1%
+ Text                   20,954    3,917,052 3,324,410          0  592,642     9.6%
+ Json                      961      572,657  572,655          0        2     1.4%
+ Yaml                    4,862      548,408  436,698     22,250   89,460     1.3%
+ Sh                        960      189,965  132,288     23,686   33,991     0.5%
+ Python                    293       89,285   69,449      5,770   14,066     0.2%
+ Rust                      158       39,561   19,032     16,697    3,832     0.1%
+ Cpp                         7        2,267    1,836         96      335     0.0%
+ Markdown                    3          578      436          0      142     0.0%
+ Css                         3          295      172         69       54     0.0%
+ CppHeader                   2          125       59         47       19     0.0%
+ Toml                        3           47       28         12        7     0.0%
+ Html                        2           33       27          3        3     0.0%
+================================================================================
+ Total                  89,639   40,876,027 31,293,116  4,433,479 5,149,432   100.0%
 ```
 
 ### JSON Output
@@ -178,7 +232,3 @@ cargo fmt
 # Lint code
 cargo clippy --all-targets --all-features
 ```
-
-## Acknowledgments
-
-- Inspired by [tokei](https://github.com/XAMPPRocky/tokei)
