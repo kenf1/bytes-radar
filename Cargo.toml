@@ -42,3 +42,19 @@ panic = "abort"
 [profile.dev]
 opt-level = 0
 debug = true
+
+[[example]]
+name = "basic_analysis"
+path = "examples/basic_analysis.rs"
+
+[[example]]
+name = "github_token_analysis"
+path = "examples/github_token_analysis.rs"
+
+[[example]]
+name = "compare_repositories"
+path = "examples/compare_repositories.rs"
+
+[[example]]
+name = "custom_analysis"
+path = "examples/custom_analysis.rs"
