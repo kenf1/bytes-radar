@@ -21,7 +21,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown, wasm32-wasi
+          targets: wasm32-unknown-unknown, wasm32-wasip1
 
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
@@ -34,9 +34,9 @@ jobs:
 
       - name: Build WASI Package
         run: |
-          cargo build --target wasm32-wasi --features wasm --release
+          cargo build --target wasm32-wasip1 --features wasm --release
           mkdir -p wasi-build
-          cp target/wasm32-wasi/release/bytes-radar.wasm wasi-build/
+          cp target/wasm32-wasip1/release/bytes-radar.wasm wasi-build/
           cp wasm/README.md wasi-build/
           cd wasi-build
           tar czf ../bytes-radar-wasi.tar.gz .
