@@ -1,16 +1,25 @@
 name = "bytes-radar"
 main = "worker.ts"
-compatibility_date = "2025-04-01"
+compatibility_date = "2024-01-01"
 
 [build]
-command = "cd .. && cargo build --release"
-cwd = "."
+command = "node build.js"
+
+[durable_objects]
+bindings = [
+  { name = "BYTES_RADAR", class_name = "BytesRadar" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["BytesRadar"]
 
 [env.production]
 name = "bytes-radar-prod"
 
 [env.staging]
 name = "bytes-radar-staging"
+
 [limits]
 cpu_ms = 300000  # 5 minutes
 compatibility_flags = ["nodejs_compat"] 

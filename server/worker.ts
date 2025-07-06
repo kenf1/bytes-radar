@@ -1,21 +1,83 @@
-import { Router } from 'itty-router';
+import type { AnalyzeOptions } from './pkg/bytes_radar';
+import wasmBinary from './pkg/bytes_radar_bg.wasm';
 
-const router = Router();
+export interface Env {
+  BYTES_RADAR: DurableObjectNamespace;
+}
 
-router.get('/', () => {
-  return new Response('Welcome to Bytes Radar!', {
-    headers: { 'content-type': 'text/plain' },
-  });
-});
+export class BytesRadar {
+  state: DurableObjectState;
+  env: Env;
+  private wasmModule: any = null;
+  private wasmInitialized = false;
 
-router.get('/health', () => {
-  return new Response('OK', {
-    headers: { 'content-type': 'text/plain' },
-  });
-});
+  constructor(state: DurableObjectState, env: Env) {
+    this.state = state;
+    this.env = env;
+  }
 
-router.all('*', () => new Response('Not Found', { status: 404 }));
+  private async initializeWasm() {
+    if (!this.wasmInitialized) {
+      try {
+        this.wasmModule = await import('./pkg/bytes_radar');
+        
+        // Initialize the WebAssembly module with the imported binary
+        await this.wasmModule.default(wasmBinary);
+        
+        this.wasmInitialized = true;
+        console.log('WebAssembly module initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize WebAssembly module:', error);
+        throw error;
+      }
+    }
+  }
+
+  async fetch(request: Request) {
+    try {
+      await this.initializeWasm();
+      
+      const url = new URL(request.url);
+      const targetUrl = url.searchParams.get('url');
+      
+      if (!targetUrl) {
+        return new Response('Missing url parameter', { status: 400 });
+      }
+
+      const maxSizeParam = url.searchParams.get('max_size');
+      const ignoreHiddenParam = url.searchParams.get('ignore_hidden');
+      const ignoreGitignoreParam = url.searchParams.get('ignore_gitignore');
+
+      const options: AnalyzeOptions = {
+        ignore_hidden: ignoreHiddenParam === 'false' ? false : true,
+        ignore_gitignore: ignoreGitignoreParam === 'false' ? false : true,
+        // Use -1 for unlimited size, otherwise parse the provided value
+        max_file_size: maxSizeParam === '-1' ? -1 : 
+                      maxSizeParam ? parseInt(maxSizeParam) : 
+                      1024 * 1024 * 10, // Default 10MB
+      };
+
+      console.log('Analyzing URL:', targetUrl, 'with options:', options);
+      
+      const result = await this.wasmModule.analyze_url(targetUrl, options);
+      return new Response(JSON.stringify(result), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error in BytesRadar fetch:', errorMessage);
+      return new Response(errorMessage, { status: 500 });
+    }
+  }
+}
 
 export default {
-  fetch: router.handle,
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const id = env.BYTES_RADAR.idFromName('default');
+    const obj = env.BYTES_RADAR.get(id);
+    return obj.fetch(request);
+  },
 }; 

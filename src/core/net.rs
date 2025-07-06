@@ -26,11 +26,14 @@ pub struct RemoteAnalyzer {
 
 impl RemoteAnalyzer {
     pub fn new() -> Self {
-        let client = Client::builder()
-            .user_agent(USER_AGENT)
-            .timeout(std::time::Duration::from_secs(300))
-            .build()
-            .expect("Failed to create HTTP client");
+        let mut builder = Client::builder().user_agent(USER_AGENT);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            builder = builder.timeout(std::time::Duration::from_secs(300));
+        }
+
+        let client = builder.build().expect("Failed to create HTTP client");
 
         Self {
             client,
@@ -63,10 +66,14 @@ impl RemoteAnalyzer {
     }
 
     fn rebuild_client(&mut self) {
-        let mut builder = Client::builder()
-            .user_agent(USER_AGENT)
-            .timeout(std::time::Duration::from_secs(self.timeout));
+        let mut builder = Client::builder().user_agent(USER_AGENT);
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            builder = builder.timeout(std::time::Duration::from_secs(self.timeout));
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
         if self.allow_insecure {
             builder = builder.danger_accept_invalid_certs(true);
         }
@@ -769,6 +776,7 @@ struct StreamReader {
 }
 
 impl StreamReader {
+    #[cfg(not(target_arch = "wasm32"))]
     fn new(
         stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + Send + 'static,
         #[cfg(feature = "cli")] progress_bar: Option<ProgressBar>,
@@ -777,6 +785,57 @@ impl StreamReader {
         let (tx, rx) = mpsc::channel(32);
 
         tokio::spawn(async move {
+            let mut downloaded = 0u64;
+            let mut stream = Box::pin(stream);
+
+            while let Some(chunk_result) = stream.next().await {
+                match chunk_result {
+                    Ok(chunk) => {
+                        downloaded += chunk.len() as u64;
+
+                        #[cfg(feature = "cli")]
+                        if let Some(pb) = &progress_bar {
+                            if let Some(_total) = total_size {
+                                pb.set_position(downloaded);
+                            } else {
+                                let formatted = RemoteAnalyzer::format_bytes_simple(downloaded);
+                                pb.set_message(format!("Downloaded {}...", formatted));
+                            }
+                        }
+
+                        if tx.send(Ok(chunk)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx
+                            .send(Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Stream error: {}", e),
+                            )))
+                            .await;
+                        break;
+                    }
+                }
+            }
+        });
+
+        Self {
+            receiver: rx,
+            current_chunk: None,
+            finished: false,
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn new(
+        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + 'static,
+        #[cfg(feature = "cli")] _progress_bar: Option<ProgressBar>,
+        _total_size: Option<u64>,
+    ) -> Self {
+        let (tx, rx) = mpsc::channel(32);
+
+        wasm_bindgen_futures::spawn_local(async move {
             let mut downloaded = 0u64;
             let mut stream = Box::pin(stream);
 

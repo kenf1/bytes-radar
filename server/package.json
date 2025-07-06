@@ -1,19 +1,18 @@
 {
-  "name": "bytes-radar-server",
+  "name": "bytes-radar-worker",
   "version": "1.0.0",
   "description": "Cloudflare Worker for Bytes Radar",
   "main": "worker.ts",
   "scripts": {
+    "build": "node build.js",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "itty-router": "^4.0.0"
+    "@cloudflare/workers-types": "^4.20240208.0"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0",
-    "typescript": "^5.0.0",
-    "@cloudflare/workers-types": "^4.0.0"
+    "typescript": "^5.3.3",
+    "wrangler": "^3.28.1"
   }
 } 

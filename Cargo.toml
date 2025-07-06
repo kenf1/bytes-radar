@@ -23,7 +23,11 @@ exclude = [
 
 [features]
 default = ["cli"]
-cli = ["dep:colored", "dep:env_logger", "dep:clap", "dep:indicatif"]
+cli = ["dep:colored", "dep:env_logger", "dep:clap", "dep:indicatif", "tokio/net", "tokio/io-util", "tokio/fs", "tokio/process", "tokio/signal", "tokio/time"]
+worker = ["dep:wasm-bindgen", "dep:web-sys", "dep:js-sys", "dep:wasm-bindgen-futures", "dep:serde-wasm-bindgen", "tokio/sync"]
+
+[lib]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 once_cell = "1.21"
@@ -33,17 +37,28 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde-xml-rs = "0.6"
 log = "0.4"
-reqwest = { version = "0.12", features = ["stream", "rustls-tls"], default-features = false }
 tar = "0.4"
-flate2 = "1.0"
-tokio = { version = "1.46", features = ["full"] }
+flate2 = "1.1"
+tokio = { version = "1.46", default-features = false, features = ["macros", "rt"] }
 futures-util = "0.3"
 bytes = "1.5"
 
-colored = { version = "2.1", optional = true }
+# Configure reqwest differently for different targets
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", features = ["stream", "rustls-tls"], default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+reqwest = { version = "0.12", features = ["stream"], default-features = false }
+
+colored = { version = "2.2", optional = true }
 env_logger = { version = "0.11", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 indicatif = { version = "0.17", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", features = ["Headers", "Request", "RequestInit", "RequestMode", "Response", "Window", "console"], optional = true }
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
 
 [profile.release]
 opt-level = 3
@@ -70,3 +85,6 @@ path = "examples/compare_repositories.rs"
 [[example]]
 name = "custom_analysis"
 path = "examples/custom_analysis.rs"
+
+[dev-dependencies]
+tokio = { version = "1.46", features = ["macros", "rt"] }
