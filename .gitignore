@@ -5,3 +5,8 @@ build/
 .vscode/
 .idea/
 .cursor/
+.wrangler/
+
+node_modules/
+wasm/node_modules/
+server/.wrangler/

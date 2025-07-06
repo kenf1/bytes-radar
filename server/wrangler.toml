@@ -1,0 +1,16 @@
+name = "bytes-radar"
+main = "worker.ts"
+compatibility_date = "2025-04-01"
+
+[build]
+command = "cd .. && cargo build --release"
+cwd = "."
+
+[env.production]
+name = "bytes-radar-prod"
+
+[env.staging]
+name = "bytes-radar-staging"
+[limits]
+cpu_ms = 300000  # 5 minutes
+compatibility_flags = ["nodejs_compat"] 
