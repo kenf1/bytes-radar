@@ -1,6 +1,7 @@
 use crate::core::{
     analysis::{FileMetrics, ProjectAnalysis},
     error::{AnalysisError, Result},
+    filter::{FilterStats, IntelligentFilter},
     registry::LanguageRegistry,
 };
 use flate2::read::GzDecoder;
@@ -8,6 +9,8 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use std::io::{Cursor, Read};
 use tar::Archive;
+
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::task;
 
 static USER_AGENT: &str = "bytes-radar/1.0.0";
@@ -20,6 +23,7 @@ pub struct RemoteAnalyzer {
     github_token: Option<String>,
     timeout: u64,
     allow_insecure: bool,
+    filter: IntelligentFilter,
     #[cfg(feature = "cli")]
     progress_bar: Option<ProgressBar>,
 }
@@ -40,6 +44,7 @@ impl RemoteAnalyzer {
             github_token: None,
             timeout: 300,
             allow_insecure: false,
+            filter: IntelligentFilter::default(),
             #[cfg(feature = "cli")]
             progress_bar: None,
         }
@@ -63,6 +68,18 @@ impl RemoteAnalyzer {
     pub fn set_allow_insecure(&mut self, allow_insecure: bool) {
         self.allow_insecure = allow_insecure;
         self.rebuild_client();
+    }
+
+    pub fn set_filter(&mut self, filter: IntelligentFilter) {
+        self.filter = filter;
+    }
+
+    pub fn set_aggressive_filtering(&mut self, enabled: bool) {
+        if enabled {
+            self.filter = IntelligentFilter::aggressive();
+        } else {
+            self.filter = IntelligentFilter::default();
+        }
     }
 
     fn rebuild_client(&mut self) {
@@ -92,14 +109,30 @@ impl RemoteAnalyzer {
     }
 
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
-        let download_url = self.resolve_git_url(url).await?;
-        let project_analysis = self.analyze_tarball_with_name(&download_url, url).await?;
-        Ok(project_analysis)
+        let download_urls = self.resolve_git_url(url).await?;
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            for download_url in download_urls {
+                match self.analyze_tarball_with_name(&download_url, url).await {
+                    Ok(analysis) => return Ok(analysis),
+                    Err(_) => continue,
+                }
+            }
+            Err(AnalysisError::network(
+                "All download URLs failed".to_string(),
+            ))
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.analyze_tarball_with_name(&download_urls[0], url).await
+        }
     }
 
-    async fn resolve_git_url(&self, url: &str) -> Result<String> {
+    async fn resolve_git_url(&self, url: &str) -> Result<Vec<String>> {
         if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
-            return Ok(url.to_string());
+            return Ok(vec![url.to_string()]);
         }
 
         if url.starts_with("http://") || url.starts_with("https://") {
@@ -110,61 +143,60 @@ impl RemoteAnalyzer {
                 && !url.contains("codeberg.org")
             {
                 if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
-                    return Ok(url.to_string());
+                    return Ok(vec![url.to_string()]);
                 } else {
-                    return Ok(url.to_string());
+                    return Ok(vec![url.to_string()]);
                 }
             }
         }
 
         let branches = ["main", "master", "develop", "dev"];
+        let mut download_urls = Vec::new();
 
         if let Some(github_url) = self.parse_github_url_with_branch(url) {
-            return Ok(github_url);
+            download_urls.push(github_url);
         }
 
         if let Some(gitlab_url) = self.parse_gitlab_url_with_branch(url) {
-            return Ok(gitlab_url);
+            download_urls.push(gitlab_url);
         }
 
         if let Some(bitbucket_url) = self.parse_bitbucket_url_with_branch(url) {
-            return Ok(bitbucket_url);
+            download_urls.push(bitbucket_url);
         }
 
         if let Some(codeberg_url) = self.parse_codeberg_url_with_branch(url) {
-            return Ok(codeberg_url);
+            download_urls.push(codeberg_url);
         }
 
-        for branch in &branches {
-            if let Some(github_url) = self.parse_github_url(url, branch) {
-                if self.check_url_exists(&github_url).await {
-                    return Ok(github_url);
+        if download_urls.is_empty() {
+            for branch in &branches {
+                if let Some(github_url) = self.parse_github_url(url, branch) {
+                    download_urls.push(github_url);
                 }
-            }
 
-            if let Some(gitlab_url) = self.parse_gitlab_url(url, branch) {
-                if self.check_url_exists(&gitlab_url).await {
-                    return Ok(gitlab_url);
+                if let Some(gitlab_url) = self.parse_gitlab_url(url, branch) {
+                    download_urls.push(gitlab_url);
                 }
-            }
 
-            if let Some(bitbucket_url) = self.parse_bitbucket_url(url, branch) {
-                if self.check_url_exists(&bitbucket_url).await {
-                    return Ok(bitbucket_url);
+                if let Some(bitbucket_url) = self.parse_bitbucket_url(url, branch) {
+                    download_urls.push(bitbucket_url);
                 }
-            }
 
-            if let Some(codeberg_url) = self.parse_codeberg_url(url, branch) {
-                if self.check_url_exists(&codeberg_url).await {
-                    return Ok(codeberg_url);
+                if let Some(codeberg_url) = self.parse_codeberg_url(url, branch) {
+                    download_urls.push(codeberg_url);
                 }
             }
         }
 
-        Err(AnalysisError::url_parsing(format!(
-            "Unsupported URL format or no accessible branch found: {}. Please provide a direct tar.gz URL or a supported repository URL.",
-            url
-        )))
+        if download_urls.is_empty() {
+            return Err(AnalysisError::url_parsing(format!(
+                "Unsupported URL format or no accessible branch found: {}. Please provide a direct tar.gz URL or a supported repository URL.",
+                url
+            )));
+        }
+
+        Ok(download_urls)
     }
 
     fn parse_github_url_with_branch(&self, url: &str) -> Option<String> {
@@ -457,21 +489,41 @@ impl RemoteAnalyzer {
             }
         }
 
-        let stream = response.bytes_stream();
-        let stream_reader = StreamReader::new(
-            stream,
-            #[cfg(feature = "cli")]
-            self.progress_bar.clone(),
-            total_size,
-        );
+        #[cfg(target_arch = "wasm32")]
+        {
+            let bytes = response
+                .bytes()
+                .await
+                .map_err(|e| AnalysisError::network(format!("Failed to read response: {}", e)))?;
 
-        #[cfg(feature = "cli")]
-        if let Some(pb) = &self.progress_bar {
-            pb.set_message("Processing archive...");
+            #[cfg(feature = "cli")]
+            if let Some(pb) = &self.progress_bar {
+                pb.set_message("Processing archive...");
+            }
+
+            self.process_tarball_bytes(&bytes, &mut project_analysis)
+                .await?;
         }
 
-        self.process_tarball_stream(stream_reader, &mut project_analysis)
-            .await?;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let stream = response.bytes_stream();
+            let stream_reader = StreamReader::new(
+                stream,
+                #[cfg(feature = "cli")]
+                self.progress_bar.clone(),
+                total_size,
+            );
+
+            #[cfg(feature = "cli")]
+            if let Some(pb) = &self.progress_bar {
+                pb.set_message("Processing archive...");
+            }
+
+            self.process_tarball_stream(stream_reader, &mut project_analysis)
+                .await?;
+        }
+
         Ok(project_analysis)
     }
 
@@ -480,7 +532,51 @@ impl RemoteAnalyzer {
         stream_reader: StreamReader,
         project_analysis: &mut ProjectAnalysis,
     ) -> Result<()> {
-        let metrics_result = task::spawn_blocking(move || {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let filter = self.filter.clone();
+            let metrics_result = task::spawn_blocking(move || {
+                let decoder = GzDecoder::new(stream_reader);
+                let mut archive = Archive::new(decoder);
+
+                let entries = archive.entries().map_err(|e| {
+                    AnalysisError::archive(format!("Failed to read tar entries: {}", e))
+                })?;
+
+                let mut collected_metrics = Vec::new();
+                let mut stats = FilterStats::new();
+
+                for entry in entries {
+                    let entry = entry.map_err(|e| {
+                        AnalysisError::archive(format!("Failed to read tar entry: {}", e))
+                    })?;
+
+                    if let Ok(metrics) = Self::process_tar_entry_sync(entry, &filter, &mut stats) {
+                        collected_metrics.push(metrics);
+                    }
+                }
+
+                #[cfg(feature = "cli")]
+                log::info!(
+                    "Filter stats: processed {}/{} files ({:.1}% filtered), saved {}",
+                    stats.processed,
+                    stats.total_entries,
+                    stats.filter_ratio() * 100.0,
+                    stats.format_bytes_saved()
+                );
+
+                Ok::<Vec<FileMetrics>, AnalysisError>(collected_metrics)
+            })
+            .await
+            .map_err(|e| AnalysisError::archive(format!("Task join error: {}", e)))??;
+
+            for metrics in metrics_result {
+                project_analysis.add_file_metrics(metrics)?;
+            }
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
             let decoder = GzDecoder::new(stream_reader);
             let mut archive = Archive::new(decoder);
 
@@ -488,31 +584,77 @@ impl RemoteAnalyzer {
                 AnalysisError::archive(format!("Failed to read tar entries: {}", e))
             })?;
 
-            let mut collected_metrics = Vec::new();
+            let mut stats = FilterStats::new();
 
             for entry in entries {
                 let entry = entry.map_err(|e| {
                     AnalysisError::archive(format!("Failed to read tar entry: {}", e))
                 })?;
 
-                if let Ok(metrics) = Self::process_tar_entry_sync(entry) {
-                    collected_metrics.push(metrics);
+                if let Ok(metrics) = Self::process_tar_entry_sync(entry, &self.filter, &mut stats) {
+                    project_analysis.add_file_metrics(metrics)?;
                 }
             }
 
-            Ok::<Vec<FileMetrics>, AnalysisError>(collected_metrics)
-        })
-        .await
-        .map_err(|e| AnalysisError::archive(format!("Task join error: {}", e)))??;
-
-        for metrics in metrics_result {
-            project_analysis.add_file_metrics(metrics)?;
+            web_sys::console::log_1(
+                &format!(
+                    "Filter stats: processed {}/{} files ({:.1}% filtered), saved {}",
+                    stats.processed,
+                    stats.total_entries,
+                    stats.filter_ratio() * 100.0,
+                    stats.format_bytes_saved()
+                )
+                .into(),
+            );
         }
 
         Ok(())
     }
 
-    fn process_tar_entry_sync<R: Read>(mut entry: tar::Entry<'_, R>) -> Result<FileMetrics> {
+    #[cfg(target_arch = "wasm32")]
+    async fn process_tarball_bytes(
+        &self,
+        bytes: &bytes::Bytes,
+        project_analysis: &mut ProjectAnalysis,
+    ) -> Result<()> {
+        let cursor = Cursor::new(bytes.as_ref());
+        let decoder = GzDecoder::new(cursor);
+        let mut archive = Archive::new(decoder);
+
+        let entries = archive
+            .entries()
+            .map_err(|e| AnalysisError::archive(format!("Failed to read tar entries: {}", e)))?;
+
+        let mut stats = FilterStats::new();
+
+        for entry in entries {
+            let entry = entry
+                .map_err(|e| AnalysisError::archive(format!("Failed to read tar entry: {}", e)))?;
+
+            if let Ok(metrics) = Self::process_tar_entry_sync(entry, &self.filter, &mut stats) {
+                project_analysis.add_file_metrics(metrics)?;
+            }
+        }
+
+        web_sys::console::log_1(
+            &format!(
+                "Filter stats: processed {}/{} files ({:.1}% filtered), saved {}",
+                stats.processed,
+                stats.total_entries,
+                stats.filter_ratio() * 100.0,
+                stats.format_bytes_saved()
+            )
+            .into(),
+        );
+
+        Ok(())
+    }
+
+    fn process_tar_entry_sync<R: Read>(
+        mut entry: tar::Entry<'_, R>,
+        filter: &IntelligentFilter,
+        stats: &mut FilterStats,
+    ) -> Result<FileMetrics> {
         let header = entry.header();
         let path = header
             .path()
@@ -525,6 +667,15 @@ impl RemoteAnalyzer {
         }
 
         let file_size = header.size().unwrap_or(0);
+
+        // Apply intelligent filtering
+        let should_process = filter.should_process_file(&file_path, file_size);
+        stats.record_entry(file_size, !should_process);
+
+        if !should_process {
+            return Err(AnalysisError::archive("File filtered out".to_string()));
+        }
+
         let language = LanguageRegistry::detect_by_path(&file_path)
             .map(|l| l.name.clone())
             .unwrap_or_else(|| "Text".to_string());
@@ -845,8 +996,8 @@ impl StreamReader {
                         downloaded += chunk.len() as u64;
 
                         #[cfg(feature = "cli")]
-                        if let Some(pb) = &progress_bar {
-                            if let Some(_total) = total_size {
+                        if let Some(pb) = &_progress_bar {
+                            if let Some(_total) = _total_size {
                                 pb.set_position(downloaded);
                             } else {
                                 let formatted = RemoteAnalyzer::format_bytes_simple(downloaded);
@@ -906,24 +1057,36 @@ impl Read for StreamReader {
                 self.finished = true;
                 Err(e)
             }
-            Err(mpsc::error::TryRecvError::Empty) => match self.receiver.blocking_recv() {
-                Some(Ok(chunk)) => {
-                    self.current_chunk = Some(Cursor::new(chunk));
-                    if let Some(ref mut cursor) = self.current_chunk {
-                        cursor.read(buf)
-                    } else {
-                        Ok(0)
+            Err(mpsc::error::TryRecvError::Empty) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    match self.receiver.blocking_recv() {
+                        Some(Ok(chunk)) => {
+                            self.current_chunk = Some(Cursor::new(chunk));
+                            if let Some(ref mut cursor) = self.current_chunk {
+                                cursor.read(buf)
+                            } else {
+                                Ok(0)
+                            }
+                        }
+                        Some(Err(e)) => {
+                            self.finished = true;
+                            Err(e)
+                        }
+                        None => {
+                            self.finished = true;
+                            Ok(0)
+                        }
                     }
                 }
-                Some(Err(e)) => {
-                    self.finished = true;
-                    Err(e)
+                #[cfg(target_arch = "wasm32")]
+                {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::WouldBlock,
+                        "Would block in WASM",
+                    ))
                 }
-                None => {
-                    self.finished = true;
-                    Ok(0)
-                }
-            },
+            }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 self.finished = true;
                 Ok(0)

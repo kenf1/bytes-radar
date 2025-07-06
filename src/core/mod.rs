@@ -1,5 +1,6 @@
 pub mod analysis;
 pub mod error;
+pub mod filter;
 pub mod net;
 pub mod registry;
 

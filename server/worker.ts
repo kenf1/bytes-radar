@@ -51,10 +51,9 @@ export class BytesRadar {
       const options: AnalyzeOptions = {
         ignore_hidden: ignoreHiddenParam === 'false' ? false : true,
         ignore_gitignore: ignoreGitignoreParam === 'false' ? false : true,
-        // Use -1 for unlimited size, otherwise parse the provided value
         max_file_size: maxSizeParam === '-1' ? -1 : 
                       maxSizeParam ? parseInt(maxSizeParam) : 
-                      1024 * 1024 * 10, // Default 10MB
+                      -1,
       };
 
       console.log('Analyzing URL:', targetUrl, 'with options:', options);

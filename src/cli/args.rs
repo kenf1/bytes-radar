@@ -53,6 +53,22 @@ pub struct Cli {
 
     #[arg(long, help = "Quiet mode - minimal output")]
     pub quiet: bool,
+
+    #[arg(long, help = "Enable aggressive filtering for maximum performance")]
+    pub aggressive_filter: bool,
+
+    #[arg(
+        long,
+        help = "Maximum file size to process in KB",
+        default_value = "1024"
+    )]
+    pub max_file_size: u64,
+
+    #[arg(long, help = "Include test directories")]
+    pub include_tests: bool,
+
+    #[arg(long, help = "Include documentation directories")]
+    pub include_docs: bool,
 }
 
 #[derive(Clone, ValueEnum)]
