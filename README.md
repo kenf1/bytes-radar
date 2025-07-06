@@ -4,7 +4,9 @@
 [![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
+
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar/tree/cf-worker)
+
 
 A fast code analysis tool for remote repositories with multi-platform support.
 
@@ -261,6 +263,12 @@ cargo clippy --all-targets --all-features
 ## Deployment
 
 ### Cloudflare Workers Deployment
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar/tree/cf-worker)
+
+> [!INFO]
+> The Free Tier of Cloudflare Workers has a **20s request timeout limit**. Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
+
 
 The server component is automatically built and pushed to the `cf-worker` branch whenever changes are made to the server code. You can deploy to Cloudflare Workers with one click using the button above. This will:
 
