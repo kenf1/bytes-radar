@@ -41,7 +41,7 @@ cargo build --release
 ## Usage
 
 ```bash
-bytes-radar [OPTIONS] <URL>
+bradar [OPTIONS] <URL>
 ```
 
 ### Examples
@@ -51,9 +51,9 @@ bytes-radar [OPTIONS] <URL>
 Analyze GitHub repositories using shorthand notation:
 
 ```bash
-bytes-radar torvalds/linux
-bytes-radar microsoft/typescript
-bytes-radar rust-lang/cargo
+bradar torvalds/linux
+bradar microsoft/typescript
+bradar rust-lang/cargo
 ```
 
 #### Branch and Commit Targeting
@@ -61,9 +61,9 @@ bytes-radar rust-lang/cargo
 Specify particular branches or commit hashes for analysis:
 
 ```bash
-bytes-radar microsoft/vscode@main
-bytes-radar kubernetes/kubernetes@release-1.28
-bytes-radar rust-lang/rust@abc1234567
+bradar microsoft/vscode@main
+bradar kubernetes/kubernetes@release-1.28
+bradar rust-lang/rust@abc1234567
 ```
 
 #### Multi-Platform Repository Support
@@ -71,9 +71,9 @@ bytes-radar rust-lang/rust@abc1234567
 Analyze repositories from different Git hosting platforms:
 
 ```bash
-bytes-radar https://gitlab.com/gitlab-org/gitlab
-bytes-radar https://bitbucket.org/atlassian/stash
-bytes-radar https://codeberg.org/forgejo/forgejo
+bradar https://gitlab.com/gitlab-org/gitlab
+bradar https://bitbucket.org/atlassian/stash
+bradar https://codeberg.org/forgejo/forgejo
 ```
 
 #### Output Format Configuration
@@ -81,9 +81,9 @@ bytes-radar https://codeberg.org/forgejo/forgejo
 Generate analysis results in structured data formats:
 
 ```bash
-bytes-radar -f json torvalds/linux
-bytes-radar -f csv microsoft/typescript
-bytes-radar -f xml rust-lang/cargo
+bradar -f json torvalds/linux
+bradar -f csv microsoft/typescript
+bradar -f xml rust-lang/cargo
 ```
 
 #### Private Repository Access
@@ -91,8 +91,8 @@ bytes-radar -f xml rust-lang/cargo
 Authenticate with platform tokens for private repository analysis:
 
 ```bash
-bytes-radar --token ghp_xxxxxxxxxxxxxxxxxxxx private-org/confidential-repo
-bytes-radar --token glpat-xxxxxxxxxxxxxxxxxxxx https://gitlab.com/private-group/project
+bradar --token ghp_xxxxxxxxxxxxxxxxxxxx private-org/confidential-repo
+bradar --token glpat-xxxxxxxxxxxxxxxxxxxx https://gitlab.com/private-group/project
 ```
 
 #### Performance and Output Control
@@ -100,8 +100,8 @@ bytes-radar --token glpat-xxxxxxxxxxxxxxxxxxxx https://gitlab.com/private-group/
 Configure analysis behavior and output verbosity:
 
 ```bash
-bytes-radar --quiet --no-progress user/repo
-bytes-radar --timeout 600 --detailed large-org/massive-repo
+bradar --quiet --no-progress user/repo
+bradar --timeout 600 --detailed large-org/massive-repo
 ```
 
 ## Usage Environments
@@ -114,7 +114,7 @@ See the CLI Options section below for command-line usage.
 
 ### Table (Default)
 ```shell
-$ bytes-radar torvalds/linux
+$ bradar torvalds/linux
 Analyzing: https://github.com/torvalds/linux
 Analysis completed in 123.76s
 
@@ -215,7 +215,7 @@ Analysis completed in 123.76s
 ## CLI Options
 
 ```bash
-bytes-radar [OPTIONS] <URL>
+bradar [OPTIONS] <URL>
 
 ARGUMENTS:
   <URL>  URL to analyze: user/repo, user/repo@branch, or full URL

@@ -1,7 +1,7 @@
 [package]
 name = "bytes-radar"
 version = "0.3.0"
-edition = "2024"
+edition = "2021"
 authors = ["ProgramZmh <zmh@lightxi.com>"]
 description = "A tool for analyzing code statistics from remote repositories with hyper-fast performance"
 license = "Apache-2.0"
@@ -23,8 +23,8 @@ exclude = [
 
 [features]
 default = ["cli"]
-cli = ["dep:colored", "dep:env_logger", "dep:clap", "dep:indicatif", "tokio/net", "tokio/io-util", "tokio/fs", "tokio/process", "tokio/signal", "tokio/time"]
-worker = ["dep:wasm-bindgen", "dep:web-sys", "dep:js-sys", "dep:wasm-bindgen-futures", "dep:serde-wasm-bindgen", "tokio/sync"]
+cli = ["colored", "env_logger", "clap", "indicatif", "tokio/net", "tokio/io-util", "tokio/fs", "tokio/process", "tokio/signal", "tokio/time", "tokio/rt-multi-thread"]
+worker = ["wasm-bindgen", "web-sys", "js-sys", "wasm-bindgen-futures", "serde-wasm-bindgen", "tokio/sync"]
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -43,22 +43,25 @@ tokio = { version = "1.46", default-features = false, features = ["macros", "rt"
 futures-util = "0.3"
 bytes = "1.5"
 
+# CLI dependencies
+colored = { version = "2.2", optional = true }
+env_logger = { version = "0.11", optional = true }
+clap = { version = "4.5", features = ["derive"], optional = true }
+indicatif = { version = "0.17", optional = true }
+
+# WASM dependencies
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", features = ["Headers", "Request", "RequestInit", "RequestMode", "Response", "Window", "console"], optional = true }
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+
 # Configure reqwest differently for different targets
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 reqwest = { version = "0.12", features = ["stream", "rustls-tls"], default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 reqwest = { version = "0.12", features = ["stream"], default-features = false }
-
-colored = { version = "2.2", optional = true }
-env_logger = { version = "0.11", optional = true }
-clap = { version = "4.5", features = ["derive"], optional = true }
-indicatif = { version = "0.17", optional = true }
-wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", features = ["Headers", "Request", "RequestInit", "RequestMode", "Response", "Window", "console"], optional = true }
-js-sys = { version = "0.3", optional = true }
-wasm-bindgen-futures = { version = "0.4", optional = true }
-serde-wasm-bindgen = { version = "0.6", optional = true }
 
 [profile.release]
 opt-level = 3
@@ -88,3 +91,7 @@ path = "examples/custom_analysis.rs"
 
 [dev-dependencies]
 tokio = { version = "1.46", features = ["macros", "rt"] }
+
+[[bin]]
+name = "bradar"
+path = "src/main.rs"

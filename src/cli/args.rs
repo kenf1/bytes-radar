@@ -1,7 +1,7 @@
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "bytes-radar")]
+#[command(name = "bradar")]
 #[command(about = "A tool for analyzing code statistics from remote repositories")]
 #[command(version)]
 #[command(long_about = "
@@ -16,15 +16,15 @@ SUPPORTED PLATFORMS:
   - Direct tar.gz/tgz URLs
 
 USAGE EXAMPLES:
-  bytes-radar user/repo                    # GitHub repo (default branch)
-  bytes-radar user/repo@master             # GitHub repo with specific branch
-  bytes-radar user/repo@abc123             # GitHub repo with specific commit
-  bytes-radar https://github.com/user/repo # Full GitHub URL
-  bytes-radar https://gitlab.com/user/repo # GitLab URL
-  bytes-radar https://bitbucket.org/user/repo # Bitbucket URL
-  bytes-radar https://example.com/file.tar.gz # Direct tar.gz URL
-  bytes-radar -f json user/repo            # JSON output format
-  bytes-radar --token ghp_xxx user/repo    # With GitHub token for private repos
+  bradar user/repo                    # GitHub repo (default branch)
+  bradar user/repo@master             # GitHub repo with specific branch
+  bradar user/repo@abc123             # GitHub repo with specific commit
+  bradar https://github.com/user/repo # Full GitHub URL
+  bradar https://gitlab.com/user/repo # GitLab URL
+  bradar https://bitbucket.org/user/repo # Bitbucket URL
+  bradar https://example.com/file.tar.gz # Direct tar.gz URL
+  bradar -f json user/repo            # JSON output format
+  bradar --token ghp_xxx user/repo    # With GitHub token for private repos
 ")]
 pub struct Cli {
     #[arg(help = "URL to analyze: user/repo, user/repo@branch, or full URL")]

@@ -2,8 +2,8 @@ use wasm_bindgen::prelude::*;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use crate::core::{
-    ProjectAnalysis,
     analysis::{FileMetrics, LanguageAnalysis},
+    ProjectAnalysis,
 };
 use flate2::read::GzDecoder;
 use std::io::{Cursor, Read};
@@ -17,7 +17,7 @@ pub struct AnalysisOptions {
 }
 
 #[wasm_bindgen]
-extern "C" {
+unsafe extern "C" {
     #[wasm_bindgen(js_name = fetch)]
     fn fetch_with_request(request: &Request) -> js_sys::Promise;
 }
