@@ -4,6 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar/tree/main/server)
 
 A fast code analysis tool for remote repositories with multi-platform support.
 
@@ -256,3 +257,47 @@ cargo fmt
 # Lint code
 cargo clippy --all-targets --all-features
 ```
+
+## Deployment
+
+### Cloudflare Workers Deployment
+
+You can deploy the server component to Cloudflare Workers with one click using the button above. This will:
+
+1. Fork the repository to your GitHub account
+2. Connect it to your Cloudflare Workers account
+3. Deploy the worker to your chosen environment
+
+#### Manual Deployment
+
+If you prefer to deploy manually:
+
+1. Install Wrangler CLI:
+```bash
+pnpm install -g wrangler
+```
+
+2. Authenticate with Cloudflare:
+```bash
+wrangler login
+```
+
+3. Deploy to staging environment:
+```bash
+cd server
+pnpm install
+wrangler deploy --env staging
+```
+
+4. Deploy to production:
+```bash
+wrangler deploy --env production
+```
+
+#### Environment Configuration
+
+The worker supports two environments:
+- `staging`: For testing and development (bytes-radar-staging.workers.dev)
+- `production`: For production use (bytes-radar-prod.workers.dev)
+
+See `server/wrangler.toml` for environment-specific configurations.

@@ -17,7 +17,7 @@ pub struct IntelligentFilter {
 impl Default for IntelligentFilter {
     fn default() -> Self {
         Self {
-            max_file_size: 1024 * 1024, // 1MB
+            max_file_size: 1024 * 1024,
             ignore_hidden: true,
             ignore_binary: true,
             ignore_build_dirs: true,
@@ -37,7 +37,7 @@ impl IntelligentFilter {
 
     pub fn aggressive() -> Self {
         Self {
-            max_file_size: 512 * 1024, // 512KB
+            max_file_size: 512 * 1024,
             ignore_hidden: true,
             ignore_binary: true,
             ignore_build_dirs: true,

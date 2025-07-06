@@ -48,10 +48,7 @@ export class BytesRadar {
     if (!this.wasmInitialized) {
       try {
         this.wasmModule = await import('./pkg/bytes_radar');
-        
-        // Initialize the WebAssembly module with the imported binary
         await this.wasmModule.default(wasmBinary);
-        
         this.wasmInitialized = true;
         this.log('info', 'WebAssembly module initialized successfully');
       } catch (error) {

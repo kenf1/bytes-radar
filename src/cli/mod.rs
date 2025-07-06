@@ -61,12 +61,11 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
     analyzer.set_allow_insecure(cli.allow_insecure);
     analyzer.set_progress_bar(progress_bar.clone());
 
-    // Configure intelligent filtering
     if cli.aggressive_filter {
         analyzer.set_aggressive_filtering(true);
     } else {
         let mut filter = filter::IntelligentFilter::default();
-        filter.max_file_size = cli.max_file_size * 1024; // Convert KB to bytes
+        filter.max_file_size = cli.max_file_size * 1024;
         filter.ignore_test_dirs = !cli.include_tests;
         filter.ignore_docs_dirs = !cli.include_docs;
         analyzer.set_filter(filter);

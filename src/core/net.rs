@@ -117,11 +117,8 @@ impl RemoteAnalyzer {
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
         let download_urls = self.resolve_git_url(url).await?;
 
-        // Collect detailed error information for each URL
         let mut url_errors: Vec<crate::core::error::DownloadUrlError> = Vec::new();
         let mut total_attempts = 0u32;
-
-        // Try all download URLs until one succeeds
         for download_url in download_urls {
             total_attempts += 1;
             match self.analyze_tarball_with_name(&download_url, url).await {
@@ -130,7 +127,6 @@ impl RemoteAnalyzer {
                     #[cfg(feature = "cli")]
                     log::debug!("Failed to download from {}: {}", download_url, e);
 
-                    // Collect detailed error information
                     let error_info = crate::core::error::DownloadUrlError {
                         url: download_url.clone(),
                         error_message: format!("{}", e),
@@ -420,7 +416,6 @@ impl RemoteAnalyzer {
         match error {
             AnalysisError::NetworkError { message } => {
                 if message.contains("HTTP request failed with status: ") {
-                    // Extract status code from error message
                     if let Some(start) = message.find("HTTP request failed with status: ") {
                         let status_start = start + "HTTP request failed with status: ".len();
                         let status_str = &message[status_start..];
@@ -850,7 +845,6 @@ impl RemoteAnalyzer {
 
         let file_size = header.size().unwrap_or(0);
 
-        // Apply intelligent filtering
         let should_process = filter.should_process_file(&file_path, file_size);
         stats.record_entry(file_size, !should_process);
 

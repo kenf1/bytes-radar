@@ -18,13 +18,11 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
 
     let mut analyzer = RemoteAnalyzer::new();
 
-    // Configure intelligent filtering
     if let Some(custom_filter) = opts.custom_filter {
         analyzer.set_filter(custom_filter);
     } else if let Some(aggressive) = opts.aggressive_filtering {
         analyzer.set_aggressive_filtering(aggressive);
     } else {
-        // Use default filter but with backwards compatibility
         let mut filter = IntelligentFilter::default();
         filter.max_file_size = opts.max_file_size as u64;
         filter.ignore_hidden = opts.ignore_hidden;
