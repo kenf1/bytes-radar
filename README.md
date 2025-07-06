@@ -17,6 +17,7 @@ A fast code analysis tool for remote repositories with multi-platform support.
 - **Structured Data Serialization**: Provides multiple output format engines (Table, JSON, CSV, XML) with schema validation and type-safe serialization for integration with external tools
 - **Authentication Layer**: Implements OAuth token management with secure credential handling for accessing private repositories across different hosting platforms
 - **Cross-Platform Binary Distribution**: Supports native compilation targets for Linux, macOS, and Windows with platform-specific optimizations and dependency management
+- **WebAssembly Support**: Run bytes-radar directly in browsers or WASI environments with full feature parity
 
 ## Installation
 
@@ -24,6 +25,12 @@ A fast code analysis tool for remote repositories with multi-platform support.
 
 ```bash
 cargo install bytes-radar
+```
+
+### From npm (WASM)
+
+```bash
+npm install bytes-radar-wasm
 ```
 
 ### From Releases
@@ -36,6 +43,9 @@ Download the latest binary from [GitHub Releases](https://github.com/zmh-program
 git clone https://github.com/zmh-program/bytes-radar.git
 cd bytes-radar
 cargo build --release
+
+# For WASM build
+wasm-pack build --target web --features wasm
 ```
 
 ## Usage
@@ -103,6 +113,16 @@ Configure analysis behavior and output verbosity:
 bytes-radar --quiet --no-progress user/repo
 bytes-radar --timeout 600 --detailed large-org/massive-repo
 ```
+
+## Usage Environments
+
+### CLI
+
+See the CLI Options section below for command-line usage.
+
+### WebAssembly
+
+bytes-radar can be used in both browser and WASI environments. For detailed WASM usage instructions and API reference, see [WASM Documentation](docs/wasm.md).
 
 ## Output Formats
 

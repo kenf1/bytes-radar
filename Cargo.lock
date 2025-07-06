@@ -139,6 +139,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "indicatif",
+ "js-sys",
  "log",
  "once_cell",
  "reqwest",
@@ -148,6 +149,8 @@ dependencies = [
  "tar",
  "thiserror 2.0.12",
  "tokio",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
