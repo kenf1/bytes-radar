@@ -9,7 +9,7 @@ A fast code analysis tool for remote repositories with multi-platform support.
 
 ## Features
 
-- **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments** (always <32MiB runtime memory usage for large files)
+- **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments** (always `<32MiB` runtime memory usage for large files)
 - **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
 - **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
 - **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation (use tokei [languages map](https://github.com/XAMPPRocky/tokei/blob/master/languages.json))
@@ -123,6 +123,36 @@ See the CLI Options section below for command-line usage.
 ### WebAssembly
 
 bytes-radar can be used in both browser and WASI environments. For detailed WASM usage instructions and API reference, see [WASM Documentation](docs/wasm.md).
+
+#### Browser Example
+
+```javascript
+import init, { analyze_repository } from 'bytes-radar';
+
+async function main() {
+    await init();
+    const result = await analyze_repository('torvalds/linux');
+    console.log(result);
+}
+```
+
+#### WASI Example
+
+```javascript
+import { WASI } from '@wasmer/wasi';
+const wasi = new WASI({
+    args: ['bytes-radar', 'torvalds/linux']
+});
+
+const instance = await WebAssembly.instantiate(
+    await WebAssembly.compile(
+        await fs.readFile('bytes-radar.wasm')
+    ),
+    { wasi_snapshot_preview1: wasi.wasiImport }
+);
+
+wasi.start(instance);
+```
 
 ## Output Formats
 

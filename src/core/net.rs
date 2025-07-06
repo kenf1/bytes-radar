@@ -10,7 +10,7 @@ use std::io::{Cursor, Read};
 use tar::Archive;
 use tokio::task;
 
-static USER_AGENT: &str = "bytes-radar/0.2.0";
+static USER_AGENT: &str = "bytes-radar/1.0.0";
 
 #[cfg(feature = "cli")]
 use indicatif::ProgressBar;
