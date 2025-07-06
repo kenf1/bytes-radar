@@ -9,7 +9,7 @@ A fast code analysis tool for remote repositories with multi-platform support.
 
 ## Features
 
-- **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments**
+- **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments** (always <32MiB runtime memory usage for large files)
 - **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
 - **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
 - **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation (use tokei [languages map](https://github.com/XAMPPRocky/tokei/blob/master/languages.json))
@@ -109,41 +109,6 @@ bytes-radar --timeout 600 --detailed large-org/massive-repo
 ### Table (Default)
 ```shell
 $ bytes-radar torvalds/linux
-Analyzing: https://github.com/torvalds/linux
-Analysis completed in 126.36s
-
-================================================================================
- Project                                                  linux@main
- Total Files                                              89,639
- Total Lines                                              40,876,027
- Code Lines                                               31,293,116
- Comment Lines                                            4,433,479
- Blank Lines                                              5,149,432
- Languages                                                14
- Primary Language                                         C
- Code Ratio                                               76.6%
- Documentation                                            14.2%
-================================================================================
- Language                Files        Lines     Code   Comments   Blanks   Share%
-================================================================================
- C                      35,586   25,268,107 18,782,347  2,836,806 3,648,954    61.8%
- CHeader                25,845   10,247,647 7,953,679  1,528,043  765,925    25.1%
- Text                   20,954    3,917,052 3,324,410          0  592,642     9.6%
- Json                      961      572,657  572,655          0        2     1.4%
- Yaml                    4,862      548,408  436,698     22,250   89,460     1.3%
- Sh                        960      189,965  132,288     23,686   33,991     0.5%
- Python                    293       89,285   69,449      5,770   14,066     0.2%
- Rust                      158       39,561   19,032     16,697    3,832     0.1%
- Cpp                         7        2,267    1,836         96      335     0.0%
- Markdown                    3          578      436          0      142     0.0%
- Css                         3          295      172         69       54     0.0%
- CppHeader                   2          125       59         47       19     0.0%
- Toml                        3           47       28         12        7     0.0%
- Html                        2           33       27          3        3     0.0%
-================================================================================
- Total                  89,639   40,876,027 31,293,116  4,433,479 5,149,432   100.0%
-
-C:\Users\86130\Desktop\bytes-radar\target\debug>bytes-radar torvalds/linux
 Analyzing: https://github.com/torvalds/linux
 Analysis completed in 123.76s
 

@@ -7,7 +7,6 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use reqwest::Client;
 use std::io::{Cursor, Read};
-use std::pin::Pin;
 use tar::Archive;
 use tokio::task;
 
@@ -452,7 +451,7 @@ impl RemoteAnalyzer {
         }
 
         let stream = response.bytes_stream();
-        let mut stream_reader = StreamReader::new(
+        let stream_reader = StreamReader::new(
             stream,
             #[cfg(feature = "cli")]
             self.progress_bar.clone(),
@@ -463,11 +462,6 @@ impl RemoteAnalyzer {
         if let Some(pb) = &self.progress_bar {
             pb.set_message("Processing archive...");
         }
-
-        stream_reader
-            .collect_all_data()
-            .await
-            .map_err(|e| AnalysisError::network(format!("Failed to collect stream data: {}", e)))?;
 
         self.process_tarball_stream(stream_reader, &mut project_analysis)
             .await?;
@@ -766,14 +760,12 @@ mod tests {
     }
 }
 
+use tokio::sync::mpsc;
+
 struct StreamReader {
-    inner: Pin<Box<dyn futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + Send>>,
+    receiver: mpsc::Receiver<std::io::Result<bytes::Bytes>>,
     current_chunk: Option<Cursor<bytes::Bytes>>,
-    #[cfg(feature = "cli")]
-    progress_bar: Option<ProgressBar>,
-    downloaded: u64,
-    total_size: Option<u64>,
-    buffer: Vec<u8>,
+    finished: bool,
 }
 
 impl StreamReader {
@@ -782,43 +774,49 @@ impl StreamReader {
         #[cfg(feature = "cli")] progress_bar: Option<ProgressBar>,
         total_size: Option<u64>,
     ) -> Self {
-        Self {
-            inner: Box::pin(stream),
-            current_chunk: None,
-            #[cfg(feature = "cli")]
-            progress_bar,
-            downloaded: 0,
-            total_size,
-            buffer: Vec::new(),
-        }
-    }
+        let (tx, rx) = mpsc::channel(32);
 
-    async fn collect_all_data(&mut self) -> std::io::Result<()> {
-        while let Some(chunk_result) = self.inner.next().await {
-            match chunk_result {
-                Ok(chunk) => {
-                    self.downloaded += chunk.len() as u64;
-                    self.buffer.extend_from_slice(&chunk);
+        tokio::spawn(async move {
+            let mut downloaded = 0u64;
+            let mut stream = Box::pin(stream);
 
-                    #[cfg(feature = "cli")]
-                    if let Some(pb) = &self.progress_bar {
-                        if let Some(_total) = self.total_size {
-                            pb.set_position(self.downloaded);
-                        } else {
-                            let formatted = RemoteAnalyzer::format_bytes_simple(self.downloaded);
-                            pb.set_message(format!("Downloaded {}...", formatted));
+            while let Some(chunk_result) = stream.next().await {
+                match chunk_result {
+                    Ok(chunk) => {
+                        downloaded += chunk.len() as u64;
+
+                        #[cfg(feature = "cli")]
+                        if let Some(pb) = &progress_bar {
+                            if let Some(_total) = total_size {
+                                pb.set_position(downloaded);
+                            } else {
+                                let formatted = RemoteAnalyzer::format_bytes_simple(downloaded);
+                                pb.set_message(format!("Downloaded {}...", formatted));
+                            }
+                        }
+
+                        if tx.send(Ok(chunk)).await.is_err() {
+                            break;
                         }
                     }
-                }
-                Err(e) => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("Stream error: {}", e),
-                    ));
+                    Err(e) => {
+                        let _ = tx
+                            .send(Err(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                format!("Stream error: {}", e),
+                            )))
+                            .await;
+                        break;
+                    }
                 }
             }
+        });
+
+        Self {
+            receiver: rx,
+            current_chunk: None,
+            finished: false,
         }
-        Ok(())
     }
 }
 
@@ -832,14 +830,45 @@ impl Read for StreamReader {
             self.current_chunk = None;
         }
 
-        if !self.buffer.is_empty() {
-            let chunk = std::mem::take(&mut self.buffer);
-            self.current_chunk = Some(Cursor::new(bytes::Bytes::from(chunk)));
-            if let Some(ref mut cursor) = self.current_chunk {
-                return cursor.read(buf);
-            }
+        if self.finished {
+            return Ok(0);
         }
 
-        Ok(0)
+        match self.receiver.try_recv() {
+            Ok(Ok(chunk)) => {
+                self.current_chunk = Some(Cursor::new(chunk));
+                if let Some(ref mut cursor) = self.current_chunk {
+                    cursor.read(buf)
+                } else {
+                    Ok(0)
+                }
+            }
+            Ok(Err(e)) => {
+                self.finished = true;
+                Err(e)
+            }
+            Err(mpsc::error::TryRecvError::Empty) => match self.receiver.blocking_recv() {
+                Some(Ok(chunk)) => {
+                    self.current_chunk = Some(Cursor::new(chunk));
+                    if let Some(ref mut cursor) = self.current_chunk {
+                        cursor.read(buf)
+                    } else {
+                        Ok(0)
+                    }
+                }
+                Some(Err(e)) => {
+                    self.finished = true;
+                    Err(e)
+                }
+                None => {
+                    self.finished = true;
+                    Ok(0)
+                }
+            },
+            Err(mpsc::error::TryRecvError::Disconnected) => {
+                self.finished = true;
+                Ok(0)
+            }
+        }
     }
 }
