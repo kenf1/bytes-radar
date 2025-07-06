@@ -117,13 +117,33 @@ impl RemoteAnalyzer {
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
         let download_urls = self.resolve_git_url(url).await?;
 
+        // Collect detailed error information for each URL
+        let mut url_errors: Vec<crate::core::error::DownloadUrlError> = Vec::new();
+        let mut total_attempts = 0u32;
+
         // Try all download URLs until one succeeds
         for download_url in download_urls {
+            total_attempts += 1;
             match self.analyze_tarball_with_name(&download_url, url).await {
                 Ok(analysis) => return Ok(analysis),
                 Err(e) => {
                     #[cfg(feature = "cli")]
                     log::debug!("Failed to download from {}: {}", download_url, e);
+
+                    // Collect detailed error information
+                    let error_info = crate::core::error::DownloadUrlError {
+                        url: download_url.clone(),
+                        error_message: format!("{}", e),
+                        error_type: match e {
+                            AnalysisError::NetworkError { .. } => "NetworkError".to_string(),
+                            AnalysisError::ArchiveError { .. } => "ArchiveError".to_string(),
+                            _ => "UnknownError".to_string(),
+                        },
+                        http_status_code: self.extract_http_status_code(&e),
+                        retry_count: 1,
+                    };
+
+                    url_errors.push(error_info);
                     continue;
                 }
             }
@@ -393,6 +413,30 @@ impl RemoteAnalyzer {
             response.status().is_success()
         } else {
             false
+        }
+    }
+
+    fn extract_http_status_code(&self, error: &AnalysisError) -> Option<u16> {
+        match error {
+            AnalysisError::NetworkError { message } => {
+                if message.contains("HTTP request failed with status: ") {
+                    // Extract status code from error message
+                    if let Some(start) = message.find("HTTP request failed with status: ") {
+                        let status_start = start + "HTTP request failed with status: ".len();
+                        let status_str = &message[status_start..];
+                        if let Some(end) = status_str.find(' ') {
+                            status_str[..end].parse().ok()
+                        } else {
+                            status_str.parse().ok()
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
         }
     }
 

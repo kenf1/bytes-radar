@@ -105,7 +105,12 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
 
             let error_result = WASMErrorResult {
                 error: format!("{}", e),
-                error_type: "AnalysisError".to_string(),
+                error_type: match e {
+                    crate::core::error::AnalysisError::NetworkError { .. } => {
+                        "NetworkError".to_string()
+                    }
+                    _ => "AnalysisError".to_string(),
+                },
                 url: url.clone(),
             };
 

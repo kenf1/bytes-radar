@@ -1,6 +1,15 @@
 use std::io;
 use thiserror::Error;
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct DownloadUrlError {
+    pub url: String,
+    pub error_message: String,
+    pub error_type: String,
+    pub http_status_code: Option<u16>,
+    pub retry_count: u32,
+}
+
 #[derive(Error, Debug)]
 pub enum AnalysisError {
     #[error("Failed to read file: {path}")]

@@ -75,13 +75,14 @@ export class BytesRadar {
       debugInfo.wasm_initialized = true;
       
       const url = new URL(request.url);
-      const targetUrl = url.searchParams.get('url');
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const targetUrl = pathParts.join('/');
       
       if (!targetUrl) {
-        debugInfo.error = 'Missing url parameter';
+        debugInfo.error = 'Missing repository path';
         debugInfo.duration_ms = performance.now() - startTime;
         return new Response(JSON.stringify({
-          error: 'Missing url parameter',
+          error: 'Missing repository path',
           debug_info: debugInfo
         }), { 
           status: 400,
@@ -116,7 +117,6 @@ export class BytesRadar {
       debugInfo.analysis_duration_ms = analysisEndTime - analysisStartTime;
       debugInfo.total_duration_ms = analysisEndTime - startTime;
       
-      // Merge WASM debug info with our debug info
       if (result && result.wasm_debug_info) {
         Object.assign(debugInfo, result.wasm_debug_info);
         delete result.wasm_debug_info;
@@ -148,15 +148,14 @@ export class BytesRadar {
       const errorStack = error instanceof Error ? error.stack : undefined;
       let errorType = 'UnknownError';
       
-      // Check if this is a WASM error with structured data
       if (error && typeof error === 'object' && 'error' in error) {
         const wasmError = error as any;
         errorMessage = wasmError.error || errorMessage;
         errorType = wasmError.error_type || 'WASMError';
         
-        // Merge WASM debug info if available
         if (wasmError.wasm_debug_info) {
           Object.assign(debugInfo, wasmError.wasm_debug_info);
+          delete wasmError.wasm_debug_info;
         }
       }
       
@@ -165,7 +164,6 @@ export class BytesRadar {
       debugInfo.error_stack = errorStack;
       debugInfo.duration_ms = performance.now() - startTime;
       
-      // Extract more specific error information if available
       if (errorMessage.includes('URL parsing error')) {
         debugInfo.error_category = 'URL_PARSING';
         debugInfo.suggested_fix = 'Please check the URL format. Use formats like: user/repo, user/repo@branch, or full GitHub URLs';
@@ -189,13 +187,15 @@ export class BytesRadar {
         duration: debugInfo.duration_ms + 'ms'
       });
       
-      return new Response(JSON.stringify({
+      const errorResponse: any = {
         error: errorMessage,
         error_type: errorType,
         error_category: debugInfo.error_category,
         suggested_fix: debugInfo.suggested_fix,
         debug_info: debugInfo
-      }), { 
+      };
+      
+      return new Response(JSON.stringify(errorResponse), { 
         status: 500,
         headers: {
           'Content-Type': 'application/json',
