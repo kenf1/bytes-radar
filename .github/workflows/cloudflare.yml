@@ -1,0 +1,56 @@
+name: Cloudflare Worker Build & Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'server/**'
+      - 'src/**'
+      - '.github/workflows/cloudflare.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: cd server; pnpm install
+        
+      - name: Build Worker
+        run: cd server; node build.js
+        
+      - name: Create and Switch to cf-worker Branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b cf-worker
+          
+      - name: Commit Built Files
+        run: |
+          git add -f server/pkg/
+          git add -f server/dist/
+          git commit -m "chore: update worker build [skip ci]"
+          
+      - name: Push to cf-worker Branch
+        run: git push origin cf-worker --force 
