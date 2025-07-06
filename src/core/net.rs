@@ -111,23 +111,21 @@ impl RemoteAnalyzer {
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
         let download_urls = self.resolve_git_url(url).await?;
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            for download_url in download_urls {
-                match self.analyze_tarball_with_name(&download_url, url).await {
-                    Ok(analysis) => return Ok(analysis),
-                    Err(_) => continue,
+        // Try all download URLs until one succeeds
+        for download_url in download_urls {
+            match self.analyze_tarball_with_name(&download_url, url).await {
+                Ok(analysis) => return Ok(analysis),
+                Err(e) => {
+                    #[cfg(feature = "cli")]
+                    log::debug!("Failed to download from {}: {}", download_url, e);
+                    continue;
                 }
             }
-            Err(AnalysisError::network(
-                "All download URLs failed".to_string(),
-            ))
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.analyze_tarball_with_name(&download_urls[0], url).await
-        }
+        Err(AnalysisError::network(
+            "All download URLs failed".to_string(),
+        ))
     }
 
     async fn resolve_git_url(&self, url: &str) -> Result<Vec<String>> {
