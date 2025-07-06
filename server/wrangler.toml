@@ -12,7 +12,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["BytesRadar"]
+new_sqlite_classes = ["BytesRadar"]
 
 [env.production]
 name = "bytes-radar-prod"
@@ -20,6 +20,4 @@ name = "bytes-radar-prod"
 [env.staging]
 name = "bytes-radar-staging"
 
-[limits]
-cpu_ms = 300000  # 5 minutes
 compatibility_flags = ["nodejs_compat"] 

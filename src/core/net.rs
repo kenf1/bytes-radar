@@ -7,6 +7,7 @@ use crate::core::{
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use reqwest::Client;
+use serde::Deserialize;
 use std::io::{Cursor, Read};
 use tar::Archive;
 
@@ -14,6 +15,11 @@ use tar::Archive;
 use tokio::task;
 
 static USER_AGENT: &str = "bytes-radar/1.0.0";
+
+#[derive(Deserialize)]
+struct GitHubRepoInfo {
+    default_branch: String,
+}
 
 #[cfg(feature = "cli")]
 use indicatif::ProgressBar;
@@ -133,55 +139,81 @@ impl RemoteAnalyzer {
             return Ok(vec![url.to_string()]);
         }
 
-        if url.starts_with("http://") || url.starts_with("https://") {
-            if !url.contains("github.com")
-                && !url.contains("gitlab.com")
-                && !url.contains("gitlab.")
-                && !url.contains("bitbucket.org")
-                && !url.contains("codeberg.org")
+        let expanded_url = self.expand_url(url);
+
+        if expanded_url.starts_with("http://") || expanded_url.starts_with("https://") {
+            if !expanded_url.contains("github.com")
+                && !expanded_url.contains("gitlab.com")
+                && !expanded_url.contains("gitlab.")
+                && !expanded_url.contains("bitbucket.org")
+                && !expanded_url.contains("codeberg.org")
             {
-                if url.ends_with(".tar.gz") || url.ends_with(".tgz") {
-                    return Ok(vec![url.to_string()]);
+                if expanded_url.ends_with(".tar.gz") || expanded_url.ends_with(".tgz") {
+                    return Ok(vec![expanded_url.to_string()]);
                 } else {
-                    return Ok(vec![url.to_string()]);
+                    return Ok(vec![expanded_url.to_string()]);
                 }
             }
         }
 
-        let branches = ["main", "master", "develop", "dev"];
         let mut download_urls = Vec::new();
 
-        if let Some(github_url) = self.parse_github_url_with_branch(url) {
+        if let Some(github_url) = self.parse_github_url_with_branch(&expanded_url) {
             download_urls.push(github_url);
         }
 
-        if let Some(gitlab_url) = self.parse_gitlab_url_with_branch(url) {
+        if let Some(gitlab_url) = self.parse_gitlab_url_with_branch(&expanded_url) {
             download_urls.push(gitlab_url);
         }
 
-        if let Some(bitbucket_url) = self.parse_bitbucket_url_with_branch(url) {
+        if let Some(bitbucket_url) = self.parse_bitbucket_url_with_branch(&expanded_url) {
             download_urls.push(bitbucket_url);
         }
 
-        if let Some(codeberg_url) = self.parse_codeberg_url_with_branch(url) {
+        if let Some(codeberg_url) = self.parse_codeberg_url_with_branch(&expanded_url) {
             download_urls.push(codeberg_url);
         }
 
         if download_urls.is_empty() {
+            let mut branches = vec![
+                "main".to_string(),
+                "master".to_string(),
+                "develop".to_string(),
+                "dev".to_string(),
+            ];
+
+            #[cfg(not(target_arch = "wasm32"))]
+            if expanded_url.contains("github.com") {
+                if let Some(default_branch) = self.get_github_default_branch(&expanded_url).await {
+                    branches.insert(0, default_branch);
+                    branches.dedup();
+                }
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            if expanded_url.contains("github.com") {
+                branches = vec![
+                    "main".to_string(),
+                    "master".to_string(),
+                    "develop".to_string(),
+                    "dev".to_string(),
+                ];
+            }
+
             for branch in &branches {
-                if let Some(github_url) = self.parse_github_url(url, branch) {
+                if let Some(github_url) = self.parse_github_url(&expanded_url, branch) {
                     download_urls.push(github_url);
                 }
 
-                if let Some(gitlab_url) = self.parse_gitlab_url(url, branch) {
+                if let Some(gitlab_url) = self.parse_gitlab_url(&expanded_url, branch) {
                     download_urls.push(gitlab_url);
                 }
 
-                if let Some(bitbucket_url) = self.parse_bitbucket_url(url, branch) {
+                if let Some(bitbucket_url) = self.parse_bitbucket_url(&expanded_url, branch) {
                     download_urls.push(bitbucket_url);
                 }
 
-                if let Some(codeberg_url) = self.parse_codeberg_url(url, branch) {
+                if let Some(codeberg_url) = self.parse_codeberg_url(&expanded_url, branch) {
                     download_urls.push(codeberg_url);
                 }
             }
@@ -190,7 +222,7 @@ impl RemoteAnalyzer {
         if download_urls.is_empty() {
             return Err(AnalysisError::url_parsing(format!(
                 "Unsupported URL format or no accessible branch found: {}. Please provide a direct tar.gz URL or a supported repository URL.",
-                url
+                expanded_url
             )));
         }
 
@@ -362,6 +394,114 @@ impl RemoteAnalyzer {
         } else {
             false
         }
+    }
+
+    fn expand_url(&self, url: &str) -> String {
+        if url.starts_with("http://") || url.starts_with("https://") {
+            return url.to_string();
+        }
+
+        if url.contains('/') && !url.starts_with("http://") && !url.starts_with("https://") {
+            let parts: Vec<&str> = url.split('@').collect();
+            let repo_part = parts[0];
+            let branch_or_commit = parts.get(1);
+
+            let path_parts: Vec<&str> = repo_part.split('/').collect();
+            if path_parts.len() == 2 {
+                if let Some(branch) = branch_or_commit {
+                    if branch.len() >= 7 && branch.chars().all(|c| c.is_ascii_hexdigit()) {
+                        return format!("https://github.com/{}/commit/{}", repo_part, branch);
+                    } else {
+                        return format!("https://github.com/{}/tree/{}", repo_part, branch);
+                    }
+                } else {
+                    return format!("https://github.com/{}", repo_part);
+                }
+            }
+        }
+
+        url.to_string()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn get_github_default_branch(&self, url: &str) -> Option<String> {
+        let (owner, repo) = self.extract_github_owner_repo(url)?;
+
+        let api_url = format!("https://api.github.com/repos/{}/{}", owner, repo);
+
+        match self.client.get(&api_url).send().await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    match response.json::<GitHubRepoInfo>().await {
+                        Ok(repo_info) => {
+                            #[cfg(feature = "cli")]
+                            log::debug!(
+                                "GitHub API: Found default branch '{}' for {}/{}",
+                                repo_info.default_branch,
+                                owner,
+                                repo
+                            );
+                            Some(repo_info.default_branch)
+                        }
+                        Err(_) => {
+                            #[cfg(feature = "cli")]
+                            log::debug!(
+                                "GitHub API: Failed to parse response for {}/{}",
+                                owner,
+                                repo
+                            );
+                            None
+                        }
+                    }
+                } else {
+                    #[cfg(feature = "cli")]
+                    log::debug!(
+                        "GitHub API: Request failed with status {} for {}/{}",
+                        response.status(),
+                        owner,
+                        repo
+                    );
+                    None
+                }
+            }
+            Err(_) => {
+                #[cfg(feature = "cli")]
+                log::debug!("GitHub API: Network error for {}/{}", owner, repo);
+                None
+            }
+        }
+    }
+
+    fn extract_github_owner_repo(&self, url: &str) -> Option<(String, String)> {
+        let url = url.trim_end_matches('/');
+
+        if let Some(github_url) = url.strip_prefix("https://github.com/") {
+            let parts: Vec<&str> = github_url.split('/').collect();
+            if parts.len() >= 2 {
+                return Some((parts[0].to_string(), parts[1].to_string()));
+            }
+        }
+
+        if url.contains("github.com") {
+            let parts: Vec<&str> = url.split('/').collect();
+            if let Some(github_pos) = parts.iter().position(|&x| x == "github.com") {
+                if github_pos + 2 < parts.len() {
+                    return Some((
+                        parts[github_pos + 1].to_string(),
+                        parts[github_pos + 2].to_string(),
+                    ));
+                }
+            }
+        }
+
+        let parts: Vec<&str> = url.split('@').collect();
+        let repo_part = parts[0];
+        let path_parts: Vec<&str> = repo_part.split('/').collect();
+        if path_parts.len() == 2 {
+            return Some((path_parts[0].to_string(), path_parts[1].to_string()));
+        }
+
+        None
     }
 
     fn parse_github_url(&self, url: &str, branch: &str) -> Option<String> {

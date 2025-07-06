@@ -20,24 +20,24 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset_name: bytes-radar-linux-x86_64
-            binary_name: bytes-radar
+            asset_name: bradar-linux-x86_64
+            binary_name: bradar
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            asset_name: bytes-radar-linux-aarch64
-            binary_name: bytes-radar
+            asset_name: bradar-linux-aarch64
+            binary_name: bradar
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            asset_name: bytes-radar-windows-x86_64.exe
-            binary_name: bytes-radar.exe
+            asset_name: bradar-windows-x86_64.exe
+            binary_name: bradar.exe
           - os: macos-latest
             target: x86_64-apple-darwin
-            asset_name: bytes-radar-macos-x86_64
-            binary_name: bytes-radar
+            asset_name: bradar-macos-x86_64
+            binary_name: bradar
           - os: macos-latest
             target: aarch64-apple-darwin
-            asset_name: bytes-radar-macos-aarch64
-            binary_name: bytes-radar
+            asset_name: bradar-macos-aarch64
+            binary_name: bradar
 
     steps:
     - name: Checkout code

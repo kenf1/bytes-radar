@@ -90,7 +90,7 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v4
       with:
-        name: bytes-radar-${{ matrix.target }}
+        name: bradar-${{ matrix.target }}
         path: |
-          target/${{ matrix.target }}/release/bytes-radar*
-          !target/${{ matrix.target }}/release/bytes-radar.d 
+          target/${{ matrix.target }}/release/bradar*
+          !target/${{ matrix.target }}/release/bradar.d 
