@@ -14,10 +14,14 @@ bindings = [
 tag = "v1"
 new_sqlite_classes = ["BytesRadar"]
 
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [env.production]
 name = "bytes-radar-prod"
 
 [env.staging]
 name = "bytes-radar-staging"
 
-compatibility_flags = ["nodejs_compat"] 
+compatibility_flags = ["nodejs_compat"]

@@ -35,52 +35,81 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
         Ok(analysis) => {
             web_sys::console::log_1(
                 &format!(
-                    "Analysis completed successfully for project: {}",
-                    analysis.project_name
+                    "Analysis completed successfully for project: {} ({} files, {} languages)",
+                    analysis.project_name,
+                    analysis.global_metrics.file_count,
+                    analysis.language_analyses.len()
                 )
                 .into(),
             );
 
             #[derive(serde::Serialize)]
-            struct SimplifiedLanguageInfo {
-                language_name: String,
-                file_count: usize,
-                total_lines: usize,
-            }
-
-            #[derive(serde::Serialize)]
-            struct DebugResult {
+            struct WASMAnalysisResult {
                 project_name: String,
-                languages: Vec<SimplifiedLanguageInfo>,
-                global_metrics: crate::core::analysis::AggregateMetrics,
-                debug_info: String,
+                summary: crate::core::analysis::ProjectSummary,
+                language_statistics: Vec<crate::core::analysis::LanguageStatistics>,
+                wasm_debug_info: WASMDebugInfo,
             }
 
-            let mut languages = Vec::new();
-            for (lang_name, lang_analysis) in &analysis.language_analyses {
-                languages.push(SimplifiedLanguageInfo {
-                    language_name: lang_name.clone(),
-                    file_count: lang_analysis.file_metrics.len(),
-                    total_lines: lang_analysis.aggregate_metrics.total_lines,
-                });
+            #[derive(serde::Serialize, Clone)]
+            struct WASMDebugInfo {
+                total_languages: usize,
+                total_files: usize,
             }
 
-            let debug_result = DebugResult {
-                project_name: analysis.project_name.clone(),
-                languages,
-                global_metrics: analysis.global_metrics.clone(),
-                debug_info: format!(
-                    "Languages: {}, Files: {}",
-                    analysis.language_analyses.len(),
-                    analysis.global_metrics.file_count
-                ),
+            let language_statistics = analysis.get_language_statistics();
+            let summary = analysis.get_summary();
+
+            let largest_file = analysis
+                .language_analyses
+                .values()
+                .flat_map(|lang| &lang.file_metrics)
+                .max_by_key(|file| file.total_lines)
+                .map(|file| file.file_path.clone());
+
+            let wasm_debug_info = WASMDebugInfo {
+                total_languages: analysis.language_analyses.len(),
+                total_files: analysis.global_metrics.file_count,
             };
 
-            Ok(serde_wasm_bindgen::to_value(&debug_result)?)
+            let result = WASMAnalysisResult {
+                project_name: analysis.project_name.clone(),
+                summary,
+                language_statistics,
+                wasm_debug_info: wasm_debug_info.clone(),
+            };
+
+            web_sys::console::log_1(
+                &format!(
+                    "WASM Analysis Debug - Languages: {}, Files: {}",
+                    wasm_debug_info.total_languages, wasm_debug_info.total_files,
+                )
+                .into(),
+            );
+
+            Ok(serde_wasm_bindgen::to_value(&result)?)
         }
         Err(e) => {
-            web_sys::console::log_1(&format!("Analysis failed: {}", e).into());
-            Err(JsValue::from_str(&format!("Analysis failed: {}", e)))
+            let error_msg = format!("Analysis failed: {}", e);
+            web_sys::console::log_1(&error_msg.into());
+            web_sys::console::log_1(
+                &format!("Error details - URL: {}, Error: {:?}", url, e).into(),
+            );
+
+            #[derive(serde::Serialize)]
+            struct WASMErrorResult {
+                error: String,
+                error_type: String,
+                url: String,
+            }
+
+            let error_result = WASMErrorResult {
+                error: format!("{}", e),
+                error_type: "AnalysisError".to_string(),
+                url: url.clone(),
+            };
+
+            Err(serde_wasm_bindgen::to_value(&error_result)?)
         }
     }
 }
