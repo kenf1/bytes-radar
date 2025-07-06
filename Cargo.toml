@@ -6,7 +6,7 @@ authors = ["ProgramZmh <zmh@lightxi.com>"]
 description = "A tool for analyzing code statistics from remote repositories with hyper-fast performance"
 license = "Apache-2.0"
 repository = "https://github.com/zmh-program/bytes-radar"
-keywords = ["cloc", "code analysis", "wasm", "remote", "cli"]
+keywords = ["cloc", "code-analysis", "wasm", "remote", "cli"]
 
 [features]
 default = ["cli"]
