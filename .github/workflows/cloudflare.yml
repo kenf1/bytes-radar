@@ -49,7 +49,6 @@ jobs:
       - name: Commit Built Files
         run: |
           git add -f server/pkg/
-          git add -f server/dist/
           git commit -m "chore: update worker build [skip ci]"
           
       - name: Push to cf-worker Branch
