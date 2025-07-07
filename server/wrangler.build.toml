@@ -1,9 +1,6 @@
 name = "bytes-radar"
-main = "worker.ts"
+main = "worker.js"
 compatibility_date = "2024-01-01"
-
-[build]
-command = "node build.js"
 
 [durable_objects]
 bindings = [
