@@ -1,6 +1,6 @@
 [package]
 name = "bytes-radar"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["ProgramZmh <zmh@lightxi.com>"]
 description = "A tool for analyzing code statistics from remote repositories with hyper-fast performance"
