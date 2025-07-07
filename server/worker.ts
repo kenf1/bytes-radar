@@ -35,11 +35,18 @@ export class BytesRadar {
         message,
         ...(data && { data })
       };
-      
-      console.log(`[${level.toUpperCase()}] ${message}`, data ? data : '');
+
+      const fn = {
+        debug: console.debug,
+        info: console.info,
+        warn: console.warn,
+        error: console.error,
+      }
       
       if (environment === 'production') {
-        console.log(JSON.stringify(logEntry));
+        fn[level](JSON.stringify(logEntry));
+      } else {
+        fn[level](`[${level.toUpperCase()}] ${message}`, data ? data : '');
       }
     }
   }
@@ -61,6 +68,11 @@ export class BytesRadar {
   }
 
   async fetch(request: Request) {
+    const url = new URL(request.url);
+    if (url.pathname === '/favicon.ico') {
+      return new Response(null, { status: 404 });
+    }
+
     const startTime = performance.now();
     const debugInfo: any = {
       timestamp: new Date().toISOString(),
@@ -71,7 +83,6 @@ export class BytesRadar {
       await this.initializeWasm();
       debugInfo.wasm_initialized = true;
       
-      const url = new URL(request.url);
       const pathParts = url.pathname.split('/').filter(Boolean);
       const targetUrl = pathParts.join('/');
       
@@ -124,15 +135,7 @@ export class BytesRadar {
         debug_info: debugInfo
       };
       
-      console.log('Analysis completed successfully:', {
-        url: targetUrl,
-        project: debugInfo.project_name,
-        files: debugInfo.files_analyzed,
-        lines: debugInfo.total_lines,
-        languages: debugInfo.languages_detected,
-        size: debugInfo.total_size_formatted,
-        duration: debugInfo.total_duration_ms + 'ms'
-      });
+      this.log('info', 'Analysis completed successfully', debugInfo);
       
       return new Response(JSON.stringify(response), {
         headers: {
@@ -175,14 +178,7 @@ export class BytesRadar {
         debugInfo.suggested_fix = 'Please check the error details and try again';
       }
       
-      console.error('Error in BytesRadar fetch:', {
-        error: errorMessage,
-        type: errorType,
-        category: debugInfo.error_category,
-        stack: errorStack,
-        url: debugInfo.target_url,
-        duration: debugInfo.duration_ms + 'ms'
-      });
+      this.log('error', 'Error in BytesRadar fetch', debugInfo);
       
       const errorResponse: any = {
         error: errorMessage,
@@ -200,14 +196,6 @@ export class BytesRadar {
         }
       });
     }
-  }
-
-  private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }
 

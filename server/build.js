@@ -2,8 +2,8 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-if (!fs.existsSync('pkg')) {
-  fs.mkdirSync('pkg');
+if (!fs.existsSync('server/pkg')) {
+  fs.mkdirSync('server/pkg');
 }
 
 console.log('Building WebAssembly module...');

@@ -3,7 +3,7 @@ main = "server/worker.ts"
 compatibility_date = "2024-01-01"
 
 [build]
-command = "node build.js"
+command = "node server/build.js"
 
 [durable_objects]
 bindings = [
