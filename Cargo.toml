@@ -1,7 +1,7 @@
 [package]
 name = "bytes-radar"
 version = "0.6.0"
-edition = "2021"
+edition = "2024"
 authors = ["ProgramZmh <zmh@lightxi.com>"]
 description = "A tool for analyzing code statistics from remote repositories with hyper-fast performance"
 license = "Apache-2.0"
@@ -18,13 +18,19 @@ exclude = [
     ".git/",
     "*.md",
     "benches/",
-    "docs/"
+    "docs/",
 ]
 
 [features]
 default = ["cli"]
 cli = ["colored", "env_logger", "clap", "indicatif"]
-worker = ["wasm-bindgen", "web-sys", "js-sys", "wasm-bindgen-futures", "serde-wasm-bindgen"]
+worker = [
+    "wasm-bindgen",
+    "web-sys",
+    "js-sys",
+    "wasm-bindgen-futures",
+    "serde-wasm-bindgen",
+]
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -50,19 +56,38 @@ indicatif = { version = "0.17", optional = true }
 
 # WASM dependencies
 wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", features = ["Headers", "Request", "RequestInit", "RequestMode", "Response", "Window", "console"], optional = true }
+web-sys = { version = "0.3", features = [
+    "Headers",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Window",
+    "console",
+], optional = true }
 js-sys = { version = "0.3", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
 serde-wasm-bindgen = { version = "0.6", optional = true }
 
 # Configure dependencies differently for different targets
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.46", default-features = false, features = ["macros", "rt", "net", "io-util", "fs", "process", "signal", "time", "rt-multi-thread", "sync"] }
-reqwest = { version = "0.12", features = ["stream", "rustls-tls", "json"], default-features = false }
+tokio = { version = "1.46", default-features = false, features = ["all"] }
+reqwest = { version = "0.12", features = [
+    "stream",
+    "rustls-tls",
+    "json",
+], default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-tokio = { version = "1.46", default-features = false, features = ["macros", "rt", "sync"] }
-reqwest = { version = "0.12", features = ["stream", "json"], default-features = false }
+tokio = { version = "1.46", default-features = false, features = [
+    "macros",
+    "rt",
+    "sync",
+] }
+reqwest = { version = "0.12", features = [
+    "stream",
+    "json",
+], default-features = false }
 
 [profile.release]
 opt-level = 3
