@@ -7,8 +7,7 @@
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar)
 
-
-A fast code analysis tool for remote repositories with multi-platform support.
+Hyper-fast **CLOC** *(\*count lines of code)* tool for remote repositories.
 
 ![Banner](docs/banner.jpg)
 
