@@ -49,6 +49,7 @@ jobs:
           cp -r server/pkg/* /tmp/worker-build/
           rm -rf /tmp/worker-build/server/node_modules
           cp server/wrangler.build.toml /tmp/worker-build/wrangler.toml
+          cp .gitignore /tmp/worker-build/.gitignore
           
       - name: Create and Switch to cf-worker Branch
         run: |

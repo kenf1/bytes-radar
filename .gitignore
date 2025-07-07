@@ -10,3 +10,4 @@ build/
 node_modules/
 wasm/node_modules/
 server/.wrangler/
+server/node_modules/
