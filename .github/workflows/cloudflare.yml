@@ -61,7 +61,7 @@ jobs:
         run: |
           cp -r /tmp/worker-build/* .
           git add .
-          git commit -m "feat(worker): update Cloudflare Worker build artifacts"
+          git commit -m "feat(worker): update worker build artifacts"
           
       - name: Push to cf-worker Branch
         run: git push origin cf-worker --force
