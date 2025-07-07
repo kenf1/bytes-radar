@@ -91,6 +91,13 @@ export class BytesRadar {
         debugInfo.duration_ms = performance.now() - startTime;
         return new Response(JSON.stringify({
           error: 'Missing repository path',
+          usage: [
+            "/[user/repo",
+            "/user/repo@master",
+            "/github.com/user/repo",
+            "/gitlab.com/user/repo",
+            "http://example.com/example-asset.tar.gz",
+          ],
           debug_info: debugInfo
         }), { 
           status: 400,
