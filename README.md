@@ -10,6 +10,8 @@
 
 A fast code analysis tool for remote repositories with multi-platform support.
 
+![Banner](docs/banner.jpg)
+
 ## Features
 
 - **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments** (always `<32MiB` runtime memory usage for large files)
@@ -157,35 +159,7 @@ Analysis completed in 123.76s
  Lex                        10        2,996    2,277        347      372     0.0%
  AWK                        12        2,611    1,777        487      347     0.0%
  C++                         7        2,267    1,932          0      335     0.0%
- Forge Config               15        1,352    1,065          0      287     0.0%
- Bazel                      78        1,303    1,097         21      185     0.0%
- Jinja2                    141        1,107      902        137       68     0.0%
- Unreal Script               5          672      574          0       98     0.0%
- ASN.1                      15          656      528          0      128     0.0%
- Markdown                    3          578      436          0      142     0.0%
- LD Script                  13          551      466          0       85     0.0%
- Autoconf                    6          449      387         29       33     0.0%
- Gherkin (Cucumber)          1          330      293          0       37     0.0%
- CSS                         3          295      241          0       54     0.0%
- SWIG                        1          252      181          0       71     0.0%
- TeX                         1          234      228          0        6     0.0%
- Alex                        2          222      180          0       42     0.0%
- XSL                        10          200      122         52       26     0.0%
- RPM Specfile                1          174      152          0       22     0.0%
- HEX                         2          173      173          0        0     0.0%
- Module-Definition           2          157      137          0       20     0.0%
- Snakemake                   4          143      114         15       14     0.0%
- Pacman's makepkg            1          131      102          0       29     0.0%
- C++ Header                  2          125      106          0       19     0.0%
- Objective-C                 1           89       72          0       17     0.0%
- TOML                        3           47       40          0        7     0.0%
- Vim Script                  1           42       39          0        3     0.0%
- HTML                        2           33       30          0        3     0.0%
- Automake                    3           31       23          3        5     0.0%
- Ruby                        1           29       25          0        4     0.0%
- Apache Velocity             1           15       15          0        0     0.0%
- INI                         2           13       11          0        2     0.0%
- Bitbake                     3           13        4          6        3     0.0%
+ ...
 ================================================================================
  Total                  89,639   40,876,027 32,848,710  2,877,885 5,149,432   100.0%
 ```
@@ -238,7 +212,7 @@ OPTIONS:
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ### Development Setup
 
@@ -269,7 +243,7 @@ cargo clippy --all-targets --all-features
 > [!TIP]
 > The Free Tier of Cloudflare Workers has a **20s request timeout limit** (wall time). Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
 
-For detailed deployment instructions and API documentation, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For detailed deployment instructions and API documentation, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Usage Environments
 
