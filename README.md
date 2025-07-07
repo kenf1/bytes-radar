@@ -262,54 +262,17 @@ cargo clippy --all-targets --all-features
 
 ## Deployment
 
-### Cloudflare Workers Deployment
+### Cloudflare Workers
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar/tree/cf-worker)
 
-> [!INFO]
-> The Free Tier of Cloudflare Workers has a **20s request timeout limit**. Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
+> [!TIP]
+> The Free Tier of Cloudflare Workers has a **20s request timeout limit** (wall time). Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
 
+For detailed deployment instructions and API documentation, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
-The server component is automatically built and pushed to the `cf-worker` branch whenever changes are made to the server code. You can deploy to Cloudflare Workers with one click using the button above. This will:
+## Usage Environments
 
-1. Fork the repository to your GitHub account (using the pre-built worker from cf-worker branch)
-2. Connect it to your Cloudflare Workers account
-3. Deploy the worker to your chosen environment
+### CLI
 
-#### Manual Deployment
-
-If you prefer to deploy manually:
-
-1. Clone the cf-worker branch which contains the pre-built worker:
-```bash
-git clone -b cf-worker https://github.com/zmh-program/bytes-radar.git
-cd bytes-radar/server
-```
-
-2. Install Wrangler CLI:
-```bash
-pnpm install -g wrangler
-```
-
-3. Authenticate with Cloudflare:
-```bash
-wrangler login
-```
-
-4. Deploy to staging environment:
-```bash
-wrangler deploy --env staging
-```
-
-5. Deploy to production:
-```bash
-wrangler deploy --env production
-```
-
-#### Environment Configuration
-
-The worker supports two environments:
-- `staging`: For testing and development (bytes-radar-staging.workers.dev)
-- `production`: For production use (bytes-radar-prod.workers.dev)
-
-See `server/wrangler.toml` for environment-specific configurations.
+See the CLI Options section below for command-line usage.

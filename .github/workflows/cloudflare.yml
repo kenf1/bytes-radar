@@ -8,6 +8,9 @@ on:
       - 'src/**'
       - '.github/workflows/cloudflare.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -52,4 +55,4 @@ jobs:
           git commit -m "chore: update worker build [skip ci]"
           
       - name: Push to cf-worker Branch
-        run: git push origin cf-worker --force 
+        run: git push origin cf-worker --force
