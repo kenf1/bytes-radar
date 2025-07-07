@@ -1,4 +1,4 @@
-name = "bytes-radar"
+name = "bradar"
 main = "server/worker.ts"
 compatibility_date = "2024-01-01"
 
