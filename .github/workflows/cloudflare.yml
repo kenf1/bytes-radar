@@ -47,9 +47,13 @@ jobs:
         run: |
           mkdir -p /tmp/worker-build
           cp -r server/pkg/* /tmp/worker-build/
-          rm -rf /tmp/worker-build/server/node_modules
           cp server/wrangler.build.toml /tmp/worker-build/wrangler.toml
-          cp .gitignore /tmp/worker-build/.gitignore
+          cp .gitignore /tmp/worker-build/
+          
+      - name: Clean target and node_modules
+        run: |
+          rm -rf target/
+          rm -rf server/node_modules/
           
       - name: Create and Switch to cf-worker Branch
         run: |
