@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p /tmp/worker-build
           cp -r server/pkg/* /tmp/worker-build/
+          cp server/wrangler.toml /tmp/worker-build/
           
       - name: Create and Switch to cf-worker Branch
         run: |
