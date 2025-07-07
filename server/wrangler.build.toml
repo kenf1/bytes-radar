@@ -1,5 +1,5 @@
 name = "bytes-radar"
-main = "worker.js"
+main = "bytes-radar.js"
 compatibility_date = "2024-01-01"
 
 [durable_objects]

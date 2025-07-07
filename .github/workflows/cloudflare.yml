@@ -47,6 +47,7 @@ jobs:
         run: |
           mkdir -p /tmp/worker-build
           cp -r server/pkg/* /tmp/worker-build/
+          rm -rf /tmp/worker-build/server/node_modules
           cp server/wrangler.build.toml /tmp/worker-build/wrangler.toml
           
       - name: Create and Switch to cf-worker Branch
