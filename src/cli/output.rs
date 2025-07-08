@@ -2,7 +2,11 @@ use super::progress::format_number;
 use crate::core::{analysis::ProjectAnalysis, error::Result};
 use colored::Colorize;
 
-pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, quiet: bool) {
+pub fn print_table_format(
+    project_analysis: &ProjectAnalysis,
+    detailed: bool,
+    quiet: bool,
+) {
     let summary = project_analysis.get_summary();
     let language_stats = project_analysis.get_language_statistics();
 

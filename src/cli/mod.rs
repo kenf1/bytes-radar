@@ -23,9 +23,15 @@ pub async fn run() -> error::Result<()> {
     let cli = args::Cli::parse();
 
     if cli.debug {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+        env_logger::Builder::from_env(
+            env_logger::Env::default().default_filter_or("debug"),
+        )
+        .init();
     } else {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+        env_logger::Builder::from_env(
+            env_logger::Env::default().default_filter_or("warn"),
+        )
+        .init();
     }
 
     match &cli.url {
@@ -86,7 +92,11 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> error::Result<()> {
 
     match format {
         OutputFormat::Table => {
-            output::print_table_format(&project_analysis, cli.detailed, cli.quiet);
+            output::print_table_format(
+                &project_analysis,
+                cli.detailed,
+                cli.quiet,
+            );
         }
         OutputFormat::Json => output::print_json_format(&project_analysis)?,
         OutputFormat::Csv => output::print_csv_format(&project_analysis)?,

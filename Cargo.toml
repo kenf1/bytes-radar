@@ -19,6 +19,8 @@ exclude = [
     "*.md",
     "benches/",
     "docs/",
+    "Makefile",
+    "rustfmt.toml",
 ]
 
 [features]

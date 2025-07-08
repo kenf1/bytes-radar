@@ -93,7 +93,8 @@ impl RemoteAnalyzer {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            builder = builder.timeout(std::time::Duration::from_secs(self.timeout));
+            builder =
+                builder.timeout(std::time::Duration::from_secs(self.timeout));
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -117,7 +118,8 @@ impl RemoteAnalyzer {
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
         let download_urls = self.resolve_git_url(url).await?;
 
-        let mut url_errors: Vec<crate::core::error::DownloadUrlError> = Vec::new();
+        let mut url_errors: Vec<crate::core::error::DownloadUrlError> =
+            Vec::new();
         #[allow(unused_variables)]
         let mut total_attempts = 0u32; //used for += 1
         for download_url in download_urls {
@@ -132,8 +134,12 @@ impl RemoteAnalyzer {
                         url: download_url.clone(),
                         error_message: format!("{e}"),
                         error_type: match e {
-                            AnalysisError::NetworkError { .. } => "NetworkError".to_string(),
-                            AnalysisError::ArchiveError { .. } => "ArchiveError".to_string(),
+                            AnalysisError::NetworkError { .. } => {
+                                "NetworkError".to_string()
+                            }
+                            AnalysisError::ArchiveError { .. } => {
+                                "ArchiveError".to_string()
+                            }
                             _ => "UnknownError".to_string(),
                         },
                         http_status_code: self.extract_http_status_code(&e),
@@ -156,14 +162,17 @@ impl RemoteAnalyzer {
 
         let expanded_url = self.expand_url(url);
 
-        if (expanded_url.starts_with("http://") || expanded_url.starts_with("https://"))
+        if (expanded_url.starts_with("http://")
+            || expanded_url.starts_with("https://"))
             && !expanded_url.contains("github.com")
             && !expanded_url.contains("gitlab.com")
             && !expanded_url.contains("gitlab.")
             && !expanded_url.contains("bitbucket.org")
             && !expanded_url.contains("codeberg.org")
         {
-            if expanded_url.ends_with(".tar.gz") || expanded_url.ends_with(".tgz") {
+            if expanded_url.ends_with(".tar.gz")
+                || expanded_url.ends_with(".tgz")
+            {
                 return Ok(vec![expanded_url.to_string()]);
             }
             return Ok(vec![expanded_url.to_string()]);
@@ -171,19 +180,27 @@ impl RemoteAnalyzer {
 
         let mut download_urls = Vec::new();
 
-        if let Some(github_url) = self.parse_github_url_with_branch(&expanded_url) {
+        if let Some(github_url) =
+            self.parse_github_url_with_branch(&expanded_url)
+        {
             download_urls.push(github_url);
         }
 
-        if let Some(gitlab_url) = self.parse_gitlab_url_with_branch(&expanded_url) {
+        if let Some(gitlab_url) =
+            self.parse_gitlab_url_with_branch(&expanded_url)
+        {
             download_urls.push(gitlab_url);
         }
 
-        if let Some(bitbucket_url) = self.parse_bitbucket_url_with_branch(&expanded_url) {
+        if let Some(bitbucket_url) =
+            self.parse_bitbucket_url_with_branch(&expanded_url)
+        {
             download_urls.push(bitbucket_url);
         }
 
-        if let Some(codeberg_url) = self.parse_codeberg_url_with_branch(&expanded_url) {
+        if let Some(codeberg_url) =
+            self.parse_codeberg_url_with_branch(&expanded_url)
+        {
             download_urls.push(codeberg_url);
         }
 
@@ -197,7 +214,9 @@ impl RemoteAnalyzer {
 
             #[cfg(not(target_arch = "wasm32"))]
             if expanded_url.contains("github.com") {
-                if let Some(default_branch) = self.get_github_default_branch(&expanded_url).await {
+                if let Some(default_branch) =
+                    self.get_github_default_branch(&expanded_url).await
+                {
                     branches.insert(0, default_branch);
                     branches.dedup();
                 }
@@ -214,19 +233,27 @@ impl RemoteAnalyzer {
             }
 
             for branch in &branches {
-                if let Some(github_url) = self.parse_github_url(&expanded_url, branch) {
+                if let Some(github_url) =
+                    self.parse_github_url(&expanded_url, branch)
+                {
                     download_urls.push(github_url);
                 }
 
-                if let Some(gitlab_url) = self.parse_gitlab_url(&expanded_url, branch) {
+                if let Some(gitlab_url) =
+                    self.parse_gitlab_url(&expanded_url, branch)
+                {
                     download_urls.push(gitlab_url);
                 }
 
-                if let Some(bitbucket_url) = self.parse_bitbucket_url(&expanded_url, branch) {
+                if let Some(bitbucket_url) =
+                    self.parse_bitbucket_url(&expanded_url, branch)
+                {
                     download_urls.push(bitbucket_url);
                 }
 
-                if let Some(codeberg_url) = self.parse_codeberg_url(&expanded_url, branch) {
+                if let Some(codeberg_url) =
+                    self.parse_codeberg_url(&expanded_url, branch)
+                {
                     download_urls.push(codeberg_url);
                 }
             }
@@ -245,7 +272,8 @@ impl RemoteAnalyzer {
         if url.contains("github.com") {
             if url.contains("/tree/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
+                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree")
+                {
                     if tree_pos + 1 < parts.len() && tree_pos >= 2 {
                         let owner = parts[tree_pos - 2];
                         let repo = parts[tree_pos - 1];
@@ -265,11 +293,16 @@ impl RemoteAnalyzer {
     }
 
     fn parse_gitlab_url_with_branch(&self, url: &str) -> Option<String> {
-        if (url.contains("gitlab.com") || url.contains("gitlab.")) && url.contains("/-/tree/") {
+        if (url.contains("gitlab.com") || url.contains("gitlab."))
+            && url.contains("/-/tree/")
+        {
             let parts: Vec<&str> = url.split('/').collect();
             if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
                 if tree_pos + 1 < parts.len() && tree_pos >= 3 {
-                    let gitlab_pos = parts.iter().position(|&x| x.contains("gitlab")).unwrap();
+                    let gitlab_pos = parts
+                        .iter()
+                        .position(|&x| x.contains("gitlab"))
+                        .unwrap();
                     let host = parts[gitlab_pos];
                     let owner = parts[gitlab_pos + 1];
                     let repo = parts[gitlab_pos + 2];
@@ -278,8 +311,13 @@ impl RemoteAnalyzer {
                         "https://{}/{}{}/-/archive/{}/{}-{}.tar.gz",
                         host,
                         owner,
-                        if parts.len() > gitlab_pos + 3 && parts[gitlab_pos + 3] != "-" {
-                            format!("/{}", parts[gitlab_pos + 3..tree_pos - 1].join("/"))
+                        if parts.len() > gitlab_pos + 3
+                            && parts[gitlab_pos + 3] != "-"
+                        {
+                            format!(
+                                "/{}",
+                                parts[gitlab_pos + 3..tree_pos - 1].join("/")
+                            )
                         } else {
                             String::new()
                         },
@@ -297,7 +335,9 @@ impl RemoteAnalyzer {
         if url.contains("bitbucket.org") {
             if url.contains("/commits/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(commits_pos) = parts.iter().position(|&x| x == "commits") {
+                if let Some(commits_pos) =
+                    parts.iter().position(|&x| x == "commits")
+                {
                     if commits_pos + 1 < parts.len() && commits_pos >= 2 {
                         let owner = parts[commits_pos - 2];
                         let repo = parts[commits_pos - 1];
@@ -311,7 +351,9 @@ impl RemoteAnalyzer {
 
             if url.contains("/branch/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(branch_pos) = parts.iter().position(|&x| x == "branch") {
+                if let Some(branch_pos) =
+                    parts.iter().position(|&x| x == "branch")
+                {
                     if branch_pos + 1 < parts.len() && branch_pos >= 2 {
                         let owner = parts[branch_pos - 2];
                         let repo = parts[branch_pos - 1];
@@ -330,7 +372,9 @@ impl RemoteAnalyzer {
         if url.contains("codeberg.org") {
             if url.contains("/commit/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(commit_pos) = parts.iter().position(|&x| x == "commit") {
+                if let Some(commit_pos) =
+                    parts.iter().position(|&x| x == "commit")
+                {
                     if commit_pos + 1 < parts.len() && commit_pos >= 2 {
                         let owner = parts[commit_pos - 2];
                         let repo = parts[commit_pos - 1];
@@ -344,7 +388,9 @@ impl RemoteAnalyzer {
 
             if url.contains("/src/branch/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(branch_pos) = parts.iter().position(|&x| x == "branch") {
+                if let Some(branch_pos) =
+                    parts.iter().position(|&x| x == "branch")
+                {
                     if branch_pos + 1 < parts.len() && branch_pos >= 3 {
                         let owner = parts[branch_pos - 3];
                         let repo = parts[branch_pos - 2];
@@ -362,7 +408,9 @@ impl RemoteAnalyzer {
     fn parse_bitbucket_url(&self, url: &str, branch: &str) -> Option<String> {
         if url.contains("bitbucket.org") {
             let parts: Vec<&str> = url.split('/').collect();
-            if let Some(bitbucket_pos) = parts.iter().position(|&x| x == "bitbucket.org") {
+            if let Some(bitbucket_pos) =
+                parts.iter().position(|&x| x == "bitbucket.org")
+            {
                 if bitbucket_pos + 2 < parts.len() {
                     let owner = parts[bitbucket_pos + 1];
                     let repo = parts[bitbucket_pos + 2];
@@ -378,7 +426,9 @@ impl RemoteAnalyzer {
     fn parse_codeberg_url(&self, url: &str, branch: &str) -> Option<String> {
         if url.contains("codeberg.org") {
             let parts: Vec<&str> = url.split('/').collect();
-            if let Some(codeberg_pos) = parts.iter().position(|&x| x == "codeberg.org") {
+            if let Some(codeberg_pos) =
+                parts.iter().position(|&x| x == "codeberg.org")
+            {
                 if codeberg_pos + 2 < parts.len() {
                     let owner = parts[codeberg_pos + 1];
                     let repo = parts[codeberg_pos + 2];
@@ -395,8 +445,11 @@ impl RemoteAnalyzer {
         match error {
             AnalysisError::NetworkError { message } => {
                 if message.contains("HTTP request failed with status: ") {
-                    if let Some(start) = message.find("HTTP request failed with status: ") {
-                        let status_start = start + "HTTP request failed with status: ".len();
+                    if let Some(start) =
+                        message.find("HTTP request failed with status: ")
+                    {
+                        let status_start =
+                            start + "HTTP request failed with status: ".len();
                         let status_str = &message[status_start..];
                         if let Some(end) = status_str.find(' ') {
                             status_str[..end].parse().ok()
@@ -419,7 +472,10 @@ impl RemoteAnalyzer {
             return url.to_string();
         }
 
-        if url.contains('/') && !url.starts_with("http://") && !url.starts_with("https://") {
+        if url.contains('/')
+            && !url.starts_with("http://")
+            && !url.starts_with("https://")
+        {
             let parts: Vec<&str> = url.split('@').collect();
             let repo_part = parts[0];
             let branch_or_commit = parts.get(1);
@@ -427,10 +483,16 @@ impl RemoteAnalyzer {
             let path_parts: Vec<&str> = repo_part.split('/').collect();
             if path_parts.len() == 2 {
                 if let Some(branch) = branch_or_commit {
-                    if branch.len() >= 7 && branch.chars().all(|c| c.is_ascii_hexdigit()) {
-                        return format!("https://github.com/{repo_part}/commit/{branch}");
+                    if branch.len() >= 7
+                        && branch.chars().all(|c| c.is_ascii_hexdigit())
+                    {
+                        return format!(
+                            "https://github.com/{repo_part}/commit/{branch}"
+                        );
                     } else {
-                        return format!("https://github.com/{repo_part}/tree/{branch}");
+                        return format!(
+                            "https://github.com/{repo_part}/tree/{branch}"
+                        );
                     }
                 } else {
                     return format!("https://github.com/{repo_part}");
@@ -461,7 +523,9 @@ impl RemoteAnalyzer {
                         }
                         Err(_) => {
                             #[cfg(feature = "cli")]
-                            log::debug!("GitHub API: Failed to parse response for {owner}/{repo}");
+                            log::debug!(
+                                "GitHub API: Failed to parse response for {owner}/{repo}"
+                            );
                             None
                         }
                     }
@@ -496,7 +560,9 @@ impl RemoteAnalyzer {
 
         if url.contains("github.com") {
             let parts: Vec<&str> = url.split('/').collect();
-            if let Some(github_pos) = parts.iter().position(|&x| x == "github.com") {
+            if let Some(github_pos) =
+                parts.iter().position(|&x| x == "github.com")
+            {
                 if github_pos + 2 < parts.len() {
                     return Some((
                         parts[github_pos + 1].to_string(),
@@ -510,7 +576,10 @@ impl RemoteAnalyzer {
         let repo_part = parts[0];
         let path_parts: Vec<&str> = repo_part.split('/').collect();
         if path_parts.len() == 2 {
-            return Some((path_parts[0].to_string(), path_parts[1].to_string()));
+            return Some((
+                path_parts[0].to_string(),
+                path_parts[1].to_string(),
+            ));
         }
 
         None
@@ -535,7 +604,8 @@ impl RemoteAnalyzer {
     fn extract_github_commit_url(&self, url: &str) -> Option<String> {
         if url.contains("/commit/") {
             let parts: Vec<&str> = url.split('/').collect();
-            if let Some(commit_pos) = parts.iter().position(|&x| x == "commit") {
+            if let Some(commit_pos) = parts.iter().position(|&x| x == "commit")
+            {
                 if commit_pos + 1 < parts.len() {
                     let owner = parts.get(parts.len() - 4)?;
                     let repo = parts.get(parts.len() - 3)?;
@@ -549,10 +619,16 @@ impl RemoteAnalyzer {
         None
     }
 
-    fn extract_github_repo_url(&self, url: &str, branch: &str) -> Option<String> {
+    fn extract_github_repo_url(
+        &self,
+        url: &str,
+        branch: &str,
+    ) -> Option<String> {
         let parts: Vec<&str> = url.split('/').collect();
         if parts.len() >= 2 && parts.contains(&"github.com") {
-            if let Some(github_pos) = parts.iter().position(|&x| x == "github.com") {
+            if let Some(github_pos) =
+                parts.iter().position(|&x| x == "github.com")
+            {
                 if github_pos + 2 < parts.len() {
                     let owner = parts[github_pos + 1];
                     let repo = parts[github_pos + 2];
@@ -570,7 +646,9 @@ impl RemoteAnalyzer {
 
         if url.contains("gitlab.com") || url.contains("gitlab.") {
             let parts: Vec<&str> = url.split('/').collect();
-            if let Some(gitlab_pos) = parts.iter().position(|&x| x.contains("gitlab")) {
+            if let Some(gitlab_pos) =
+                parts.iter().position(|&x| x.contains("gitlab"))
+            {
                 if gitlab_pos + 2 < parts.len() {
                     let host = parts[gitlab_pos];
                     let owner = parts[gitlab_pos + 1];
@@ -595,15 +673,14 @@ impl RemoteAnalyzer {
         download_url: &str,
         original_url: &str,
     ) -> Result<ProjectAnalysis> {
-        let project_name = self.extract_project_name_from_original(original_url);
+        let project_name =
+            self.extract_project_name_from_original(original_url);
         let mut project_analysis = ProjectAnalysis::new(project_name);
 
-        let response = self
-            .client
-            .get(download_url)
-            .send()
-            .await
-            .map_err(|e| AnalysisError::network(format!("Failed to fetch URL: {e}")))?;
+        let response =
+            self.client.get(download_url).send().await.map_err(|e| {
+                AnalysisError::network(format!("Failed to fetch URL: {e}"))
+            })?;
 
         if !response.status().is_success() {
             return Err(AnalysisError::network(format!(
@@ -634,10 +711,12 @@ impl RemoteAnalyzer {
 
         #[cfg(target_arch = "wasm32")]
         {
-            let bytes = response
-                .bytes()
-                .await
-                .map_err(|e| AnalysisError::network(format!("Failed to read response: {}", e)))?;
+            let bytes = response.bytes().await.map_err(|e| {
+                AnalysisError::network(format!(
+                    "Failed to read response: {}",
+                    e
+                ))
+            })?;
 
             #[cfg(feature = "cli")]
             if let Some(pb) = &self.progress_bar {
@@ -723,18 +802,26 @@ impl RemoteAnalyzer {
             let decoder = GzDecoder::new(stream_reader);
             let mut archive = Archive::new(decoder);
 
-            let entries = archive
-                .entries()
-                .map_err(|e| AnalysisError::archive(format!("Failed to read tar entries: {e}")))?;
+            let entries = archive.entries().map_err(|e| {
+                AnalysisError::archive(format!(
+                    "Failed to read tar entries: {e}"
+                ))
+            })?;
 
             let mut stats = FilterStats::new();
 
             for entry in entries {
                 let entry = entry.map_err(|e| {
-                    AnalysisError::archive(format!("Failed to read tar entry: {e}"))
+                    AnalysisError::archive(format!(
+                        "Failed to read tar entry: {e}"
+                    ))
                 })?;
 
-                if let Ok(metrics) = Self::process_tar_entry_sync(entry, &self.filter, &mut stats) {
+                if let Ok(metrics) = Self::process_tar_entry_sync(
+                    entry,
+                    &self.filter,
+                    &mut stats,
+                ) {
                     project_analysis.add_file_metrics(metrics)?;
                 }
             }
@@ -764,17 +851,20 @@ impl RemoteAnalyzer {
         let decoder = GzDecoder::new(cursor);
         let mut archive = Archive::new(decoder);
 
-        let entries = archive
-            .entries()
-            .map_err(|e| AnalysisError::archive(format!("Failed to read tar entries: {e}")))?;
+        let entries = archive.entries().map_err(|e| {
+            AnalysisError::archive(format!("Failed to read tar entries: {e}"))
+        })?;
 
         let mut stats = FilterStats::new();
 
         for entry in entries {
-            let entry = entry
-                .map_err(|e| AnalysisError::archive(format!("Failed to read tar entry: {e}")))?;
+            let entry = entry.map_err(|e| {
+                AnalysisError::archive(format!("Failed to read tar entry: {e}"))
+            })?;
 
-            if let Ok(metrics) = Self::process_tar_entry_sync(entry, &self.filter, &mut stats) {
+            if let Ok(metrics) =
+                Self::process_tar_entry_sync(entry, &self.filter, &mut stats)
+            {
                 project_analysis.add_file_metrics(metrics)?;
             }
         }
@@ -799,9 +889,9 @@ impl RemoteAnalyzer {
         stats: &mut FilterStats,
     ) -> Result<FileMetrics> {
         let header = entry.header();
-        let path = header
-            .path()
-            .map_err(|e| AnalysisError::archive(format!("Invalid path in tar entry: {e}")))?;
+        let path = header.path().map_err(|e| {
+            AnalysisError::archive(format!("Invalid path in tar entry: {e}"))
+        })?;
 
         let file_path = path.to_string_lossy().to_string();
 
@@ -836,10 +926,12 @@ impl RemoteAnalyzer {
 
             if url.contains("/tree/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree") {
+                if let Some(tree_pos) = parts.iter().position(|&x| x == "tree")
+                {
                     if tree_pos > 1 {
                         let repo = parts[tree_pos - 1];
-                        let branch = parts.get(tree_pos + 1).unwrap_or(&"unknown");
+                        let branch =
+                            parts.get(tree_pos + 1).unwrap_or(&"unknown");
                         return format!("{repo}@{branch}");
                     }
                 }
@@ -847,11 +939,17 @@ impl RemoteAnalyzer {
 
             if url.contains("/commit/") {
                 let parts: Vec<&str> = url.split('/').collect();
-                if let Some(commit_pos) = parts.iter().position(|&x| x == "commit") {
+                if let Some(commit_pos) =
+                    parts.iter().position(|&x| x == "commit")
+                {
                     if commit_pos > 1 {
                         let repo = parts[commit_pos - 1];
-                        let commit = parts.get(commit_pos + 1).unwrap_or(&"unknown");
-                        return format!("{repo}@{}", &commit[..7.min(commit.len())]);
+                        let commit =
+                            parts.get(commit_pos + 1).unwrap_or(&"unknown");
+                        return format!(
+                            "{repo}@{}",
+                            &commit[..7.min(commit.len())]
+                        );
                     }
                 }
             }
@@ -1013,12 +1111,21 @@ mod tests {
 
         assert_eq!(
             analyzer.parse_github_url("https://github.com/user/repo", "main"),
-            Some("https://github.com/user/repo/archive/refs/heads/main.tar.gz".to_string())
+            Some(
+                "https://github.com/user/repo/archive/refs/heads/main.tar.gz"
+                    .to_string()
+            )
         );
 
         assert_eq!(
-            analyzer.parse_github_url("https://github.com/user/repo/commit/abc123", "main"),
-            Some("https://github.com/user/repo/archive/abc123.tar.gz".to_string())
+            analyzer.parse_github_url(
+                "https://github.com/user/repo/commit/abc123",
+                "main"
+            ),
+            Some(
+                "https://github.com/user/repo/archive/abc123.tar.gz"
+                    .to_string()
+            )
         );
     }
 
@@ -1027,7 +1134,8 @@ mod tests {
         let analyzer = RemoteAnalyzer::new();
 
         assert_eq!(
-            analyzer.parse_bitbucket_url("https://bitbucket.org/user/repo", "main"),
+            analyzer
+                .parse_bitbucket_url("https://bitbucket.org/user/repo", "main"),
             Some("https://bitbucket.org/user/repo/get/main.tar.gz".to_string())
         );
     }
@@ -1037,8 +1145,12 @@ mod tests {
         let analyzer = RemoteAnalyzer::new();
 
         assert_eq!(
-            analyzer.parse_codeberg_url("https://codeberg.org/user/repo", "main"),
-            Some("https://codeberg.org/user/repo/archive/main.tar.gz".to_string())
+            analyzer
+                .parse_codeberg_url("https://codeberg.org/user/repo", "main"),
+            Some(
+                "https://codeberg.org/user/repo/archive/main.tar.gz"
+                    .to_string()
+            )
         );
     }
 
@@ -1052,7 +1164,9 @@ mod tests {
         );
 
         assert_eq!(
-            analyzer.extract_project_name("https://github.com/user/repo/archive/main.tar.gz"),
+            analyzer.extract_project_name(
+                "https://github.com/user/repo/archive/main.tar.gz"
+            ),
             "main"
         );
     }
@@ -1069,7 +1183,9 @@ struct StreamReader {
 impl StreamReader {
     #[cfg(not(target_arch = "wasm32"))]
     fn new(
-        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + Send + 'static,
+        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>>
+        + Send
+        + 'static,
         #[cfg(feature = "cli")] progress_bar: Option<ProgressBar>,
         total_size: Option<u64>,
     ) -> Self {
@@ -1089,8 +1205,13 @@ impl StreamReader {
                             if let Some(_total) = total_size {
                                 pb.set_position(downloaded);
                             } else {
-                                let formatted = RemoteAnalyzer::format_bytes_simple(downloaded);
-                                pb.set_message(format!("Downloaded {formatted}..."));
+                                let formatted =
+                                    RemoteAnalyzer::format_bytes_simple(
+                                        downloaded,
+                                    );
+                                pb.set_message(format!(
+                                    "Downloaded {formatted}..."
+                                ));
                             }
                         }
 
@@ -1099,7 +1220,9 @@ impl StreamReader {
                         }
                     }
                     Err(e) => {
-                        let _ = tx.send(Err(std::io::Error::other(format!("Stream error: {e}"))));
+                        let _ = tx.send(Err(std::io::Error::other(format!(
+                            "Stream error: {e}"
+                        ))));
                         break;
                     }
                 }
@@ -1115,7 +1238,8 @@ impl StreamReader {
 
     #[cfg(target_arch = "wasm32")]
     fn new(
-        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>> + 'static,
+        stream: impl futures_util::Stream<Item = reqwest::Result<bytes::Bytes>>
+        + 'static,
         #[cfg(feature = "cli")] _progress_bar: Option<ProgressBar>,
         _total_size: Option<u64>,
     ) -> Self {
@@ -1135,8 +1259,14 @@ impl StreamReader {
                             if let Some(_total) = _total_size {
                                 pb.set_position(downloaded);
                             } else {
-                                let formatted = RemoteAnalyzer::format_bytes_simple(downloaded);
-                                pb.set_message(format!("Downloaded {}...", formatted));
+                                let formatted =
+                                    RemoteAnalyzer::format_bytes_simple(
+                                        downloaded,
+                                    );
+                                pb.set_message(format!(
+                                    "Downloaded {}...",
+                                    formatted
+                                ));
                             }
                         }
 
