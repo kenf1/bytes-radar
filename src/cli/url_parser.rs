@@ -12,12 +12,12 @@ pub fn expand_url(url: &str) -> String {
         if path_parts.len() == 2 {
             if let Some(branch) = branch_or_commit {
                 if branch.len() >= 7 && branch.chars().all(|c| c.is_ascii_hexdigit()) {
-                    return format!("https://github.com/{}/commit/{}", repo_part, branch);
+                    return format!("https://github.com/{repo_part}/commit/{branch}");
                 } else {
-                    return format!("https://github.com/{}/tree/{}", repo_part, branch);
+                    return format!("https://github.com/{repo_part}/tree/{branch}");
                 }
             } else {
-                return format!("https://github.com/{}", repo_part);
+                return format!("https://github.com/{repo_part}");
             }
         }
     }

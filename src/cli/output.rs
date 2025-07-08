@@ -126,7 +126,7 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
 
 pub fn print_json_format(project_analysis: &ProjectAnalysis) -> Result<()> {
     let json = serde_json::to_string_pretty(project_analysis)?;
-    println!("{}", json);
+    println!("{json}");
     Ok(())
 }
 

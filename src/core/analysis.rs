@@ -32,7 +32,7 @@ impl Display for FileCategory {
             Self::Test => "Test",
             Self::Build => "Build",
         };
-        write!(f, "{}", category)
+        write!(f, "{category}")
     }
 }
 
