@@ -1,3 +1,4 @@
+use crate::net::traits::ProgressHook;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -58,5 +59,48 @@ pub fn format_bytes(bytes: u64) -> String {
         format!("{} {}", bytes, UNITS[unit_index])
     } else {
         format!("{:.1} {}", size, UNITS[unit_index])
+    }
+}
+
+pub struct ProgressBarHook {
+    progress_bar: ProgressBar,
+}
+
+impl ProgressBarHook {
+    pub fn new(progress_bar: ProgressBar) -> Self {
+        Self { progress_bar }
+    }
+}
+
+impl ProgressHook for ProgressBarHook {
+    fn on_download_progress(&self, downloaded: u64, total: Option<u64>) {
+        if let Some(total_size) = total {
+            self.progress_bar.set_style(
+                ProgressStyle::default_bar()
+                    .template("[{elapsed_precise}] [{wide_bar:.cyan/blue}] {decimal_bytes_per_sec} {binary_bytes}/{binary_total_bytes} ({eta}) {msg}")
+                    .unwrap_or_else(|_| ProgressStyle::default_bar())
+                    .progress_chars("#>-"),
+            );
+            self.progress_bar.set_length(total_size);
+            self.progress_bar.set_position(downloaded);
+        } else {
+            let formatted = format_bytes(downloaded);
+            self.progress_bar
+                .set_message(format!("Downloaded {}...", formatted));
+        }
+    }
+
+    fn on_processing_start(&self, message: &str) {
+        self.progress_bar.set_message(message.to_string());
+    }
+
+    fn on_processing_progress(&self, current: usize, total: usize) {
+        if total > 0 {
+            let percentage = (current * 100) / total;
+            self.progress_bar.set_message(format!(
+                "Processing files: {}% ({}/{})",
+                percentage, current, total
+            ));
+        }
     }
 }

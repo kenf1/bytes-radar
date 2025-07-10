@@ -1,4 +1,4 @@
-use crate::core::{filter::IntelligentFilter, net::RemoteAnalyzer};
+use crate::{core::filter::IntelligentFilter, net::RemoteAnalyzer};
 use wasm_bindgen::prelude::*;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -58,7 +58,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
             let language_statistics = analysis.get_language_statistics();
             let summary = analysis.get_summary();
 
-            let largest_file = analysis
+            let _largest_file = analysis
                 .language_analyses
                 .values()
                 .flat_map(|lang| &lang.file_metrics)

@@ -10,6 +10,8 @@ mod url_parser;
 #[cfg(feature = "cli")]
 use crate::core::*;
 #[cfg(feature = "cli")]
+use crate::net::RemoteAnalyzer;
+#[cfg(feature = "cli")]
 use clap::Parser;
 #[cfg(feature = "cli")]
 use std::time::Instant;
@@ -54,12 +56,17 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
     let mut analyzer = RemoteAnalyzer::new();
 
     if let Some(token) = &cli.token {
-        analyzer.set_github_token(token);
+        let mut credentials = std::collections::HashMap::new();
+        credentials.insert("token".to_string(), token.clone());
+        analyzer.set_provider_credentials("github", credentials);
     }
 
     analyzer.set_timeout(cli.timeout);
     analyzer.set_allow_insecure(cli.allow_insecure);
-    analyzer.set_progress_bar(progress_bar.clone());
+
+    if let Some(pb) = progress_bar.clone() {
+        analyzer.set_progress_hook(progress::ProgressBarHook::new(pb));
+    }
 
     if cli.aggressive_filter {
         analyzer.set_aggressive_filtering(true);

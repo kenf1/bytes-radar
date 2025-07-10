@@ -1,4 +1,4 @@
-use crate::core::RemoteAnalyzer;
+use crate::net::RemoteAnalyzer;
 use wasm_bindgen::prelude::*;
 
 #[derive(serde::Serialize, serde::Deserialize)]

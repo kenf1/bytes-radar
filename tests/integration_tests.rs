@@ -153,7 +153,10 @@ mod integration_tests {
 
         analyzer.set_timeout(120);
         analyzer.set_allow_insecure(true);
-        analyzer.set_github_token("test-token");
+
+        let mut credentials = std::collections::HashMap::new();
+        credentials.insert("token".to_string(), "test-token".to_string());
+        analyzer.set_provider_credentials("github", credentials);
 
         assert!(true);
     }
