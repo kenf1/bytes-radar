@@ -7,7 +7,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "deploy:prod": "node server/build.js && wrangler deploy",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write . && cargo fmt"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20240208.0"

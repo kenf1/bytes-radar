@@ -13,51 +13,42 @@ Hyper-fast **CLOC** _(\*count lines of code)_ tool for remote repositories.
 
 ## Features
 
-- **Asynchronous Repository Processing**: Non-blocking HTTP client with async streaming request processing for efficient remote repository fetching and decompression, optimized for **low memory usage** and **serverless environments** (always `<32MiB` runtime memory usage for large files)
-- **Multi-Platform URL Resolution**: Features intelligent URL parsing engine that normalizes different Git hosting platform APIs (GitHub, GitLab, Bitbucket, Codeberg) into unified archive endpoints with branch/commit resolution
-- **Streaming Archive Analysis**: Processes tar.gz archives directly in memory using streaming decompression without temporary file extraction, reducing I/O overhead and memory footprint
-- **Language Detection Engine**: Implements rule-based file extension and content analysis system supporting 150+ programming languages with configurable pattern matching and statistical computation (use tokei [languages map](https://github.com/XAMPPRocky/tokei/blob/master/languages.json))
-- **Real-time Progress Monitoring**: Features bandwidth-aware progress tracking with download speed calculation, ETA estimation, and adaptive UI rendering for terminal environments
-- **Structured Data Serialization**: Provides multiple output format engines (Table, JSON, CSV, XML) with schema validation and type-safe serialization for integration with external tools
-- **Authentication Layer**: Implements OAuth token management with secure credential handling for accessing private repositories across different hosting platforms
-- **Cross-Platform Binary Distribution**: Supports native compilation targets for Linux, macOS, and Windows with platform-specific optimizations and dependency management
+- Efficient remote repository analysis with async streaming and in-memory decompression, optimized for low memory usage (always <12MB runtime mem)
+- Unified URL parsing for GitHub, GitLab, Bitbucket, Codeberg, SourceForge, Gitea and Azure DevOps
+- Rule-based language detection supporting 150+ programming languages with [Tokei's Language Rules](https://github.com/XAMPPRocky/tokei/blob/master/languages.json)
+- Real-time progress tracking with download speed, ETA and adaptive terminal UI
+- Multiple output formats (Table, JSON, CSV, XML, YAML, TOML) with schema validation
+- OAuth token management for private repository access
+- Native binaries for Linux, macOS and Windows
+- Experimental parallel processing and streaming analysis
+
+## Supported Platforms
+
+| Platform           | URL Format                                | Example                                     |
+| ------------------ | ----------------------------------------- | ------------------------------------------- |
+| **GitHub**         | `user/repo`, `user/repo@branch`, full URL | `microsoft/vscode`, `torvalds/linux@master` |
+| **GitLab**         | Full URL                                  | `https://gitlab.com/user/repo`              |
+| **Bitbucket**      | Full URL                                  | `https://bitbucket.org/user/repo`           |
+| **Codeberg**       | Full URL                                  | `https://codeberg.org/user/repo`            |
+| **SourceForge**    | Full URL                                  | `https://sourceforge.net/user/repo`         |
+| **Gitea**          | Full URL                                  | `https://gitea.example.com/user/repo`       |
+| **Azure DevOps**   | Full URL                                  | `https://dev.azure.com/org/project`         |
+| **Direct Archive** | tar.gz, tgz, zip URL                      | `https://example.com/archive.tar.gz`        |
 
 ## Installation
 
-### From Cargo (Recommended)
+Download the latest binary from **[GitHub Releases](https://github.com/zmh-program/bytes-radar/releases)** or install via Cargo:
 
 ```bash
 cargo install bytes-radar
 ```
 
-### From Releases
-
-Download the latest binary from [GitHub Releases](https://github.com/zmh-program/bytes-radar/releases)
-
-### From Source
-
-```bash
-git clone https://github.com/zmh-program/bytes-radar.git
-cd bytes-radar
-cargo build --release
-```
-
 ## Usage
 
-```bash
-bradar [OPTIONS] <URL>
-```
-
-### Examples
-
-#### Basic Repository Analysis
-
-Analyze GitHub repositories using shorthand notation:
+#### Basic Repo Analysis
 
 ```bash
-bradar torvalds/linux
-bradar microsoft/typescript
-bradar rust-lang/cargo
+bradar torvalds/linux # or https://github.com/torvalds/linux
 ```
 
 #### Branch and Commit Targeting
@@ -65,9 +56,8 @@ bradar rust-lang/cargo
 Specify particular branches or commit hashes for analysis:
 
 ```bash
-bradar microsoft/vscode@main
-bradar kubernetes/kubernetes@release-1.28
-bradar rust-lang/rust@abc1234567
+bradar microsoft/vscode@main # or https://github.com/microsoft/vscode/tree/main
+bradar kubernetes/kubernetes@release-1.28 # or https://github.com/kubernetes/kubernetes/tree/release-1.28
 ```
 
 #### Multi-Platform Repository Support
@@ -86,8 +76,6 @@ Generate analysis results in structured data formats:
 
 ```bash
 bradar -f json torvalds/linux
-bradar -f csv microsoft/typescript
-bradar -f xml rust-lang/cargo
 ```
 
 #### Private Repository Access
@@ -108,132 +96,71 @@ bradar --quiet --no-progress user/repo
 bradar --timeout 600 --detailed large-org/massive-repo
 ```
 
-## Usage Environments
-
-### CLI
-
-See the CLI Options section below for command-line usage.
-
-## Output Formats
-
-### Table (Default)
-
-```shell
-$ bradar torvalds/linux
-Analyzing: https://github.com/torvalds/linux
-Analysis completed in 123.76s
-
-================================================================================
- Project                                                  linux@main
- Total Files                                              89,639
- Total Lines                                              40,876,027
- Code Lines                                               32,848,710
- Comment Lines                                            2,877,885
- Blank Lines                                              5,149,432
- Languages                                                51
- Primary Language                                         C
- Code Ratio                                               80.4%
- Documentation                                            8.8%
-================================================================================
- Language                Files        Lines     Code   Comments   Blanks       %
-================================================================================
- C                      35,586   25,268,107 18,782,347  2,836,806 3,648,954    61.8%
- C Header               25,845   10,247,647 9,481,722          0  765,925    25.1%
- Device Tree             5,789    1,831,396 1,589,630          0  241,766     4.5%
- ReStructuredText        3,785      782,387  593,628          0  188,759     1.9%
- JSON                      961      572,657  572,655          0        2     1.4%
- Text                    5,100      566,733  499,590          0   67,143     1.4%
- YAML                    4,862      548,408  458,948          0   89,460     1.3%
- GNU Style Assembly      1,343      373,956  326,745          0   47,211     0.9%
- Shell                     960      189,965  155,974          0   33,991     0.5%
- Plain Text              1,298      128,205  105,235          0   22,970     0.3%
- Python                    293       89,285   69,449      5,770   14,066     0.2%
- Makefile                3,115       82,692   57,091     13,109   12,492     0.2%
- SVG                        82       53,409   53,316          0       93     0.1%
- Perl                       58       43,986   33,264      4,406    6,316     0.1%
- Rust                      158       39,561   19,032     16,697    3,832     0.1%
- XML                        24       22,193   20,971          0    1,222     0.1%
- PO File                     7        6,711    5,605          0    1,106     0.0%
- Happy                      10        6,078    5,352          0      726     0.0%
- Assembly                   11        5,361    4,427          0      934     0.0%
- Lex                        10        2,996    2,277        347      372     0.0%
- AWK                        12        2,611    1,777        487      347     0.0%
- C++                         7        2,267    1,932          0      335     0.0%
- ...
-================================================================================
- Total                  89,639   40,876,027 32,848,710  2,877,885 5,149,432   100.0%
-```
-
-### JSON Output
-
-```json
-{
-  "project_name": "linux@master",
-  "summary": {
-    "total_files": 75823,
-    "total_lines": 28691744,
-    "code_lines": 22453891,
-    "comment_lines": 3891234,
-    "blank_lines": 2346619
-  },
-  "language_statistics": [...]
-}
-```
-
-## Supported Platforms
-
-| Platform      | URL Format              | Example                           |
-| ------------- | ----------------------- | --------------------------------- |
-| **GitHub**    | `user/repo` or full URL | `torvalds/linux`                  |
-| **GitLab**    | Full URL                | `https://gitlab.com/user/repo`    |
-| **Bitbucket** | Full URL                | `https://bitbucket.org/user/repo` |
-| **Codeberg**  | Full URL                | `https://codeberg.org/user/repo`  |
-| **Direct**    | tar.gz URL              | `https://example.com/file.tar.gz` |
-
 ## CLI Options
 
 ```bash
 bradar [OPTIONS] <URL>
 
 ARGUMENTS:
-  <URL>  URL to analyze: user/repo, user/repo@branch, or full URL
+  <URL>  Repository URL to analyze (user/repo, user/repo@branch, or full URL)
 
 OPTIONS:
-  -f, --format <FORMAT>        Output format [table|json|csv|xml]
-      --detailed               Show detailed file-by-file statistics
-  -d, --debug                  Enable debug output
-      --token <TOKEN>          GitHub token for private repositories
-      --timeout <SECONDS>      Request timeout in seconds [default: 300]
-      --allow-insecure         Allow insecure HTTP connections
-      --no-progress           Disable progress bar
-      --quiet                 Quiet mode - minimal output
-  -h, --help                  Print help
-  -V, --version               Print version
+  # Output Options
+  -f, --format <FORMAT>        Output format [table|json|csv|xml|yaml|toml]
+      --detailed              Show detailed file-by-file statistics
+  -q, --quiet                Quiet mode - suppress progress and minimize output
+      --no-progress          Disable progress bar
+      --no-color             Disable colored output
+
+  # Authentication
+      --token <TOKEN>        Authentication token for private repositories
+
+  # Network Options
+      --timeout <SECONDS>    Request timeout in seconds [default: 300]
+      --allow-insecure       Allow insecure HTTPS connections
+      --user-agent <STRING>  Custom User-Agent string
+      --retry-count <COUNT>  Number of retry attempts for failed requests [default: 3]
+
+  # Filtering Options
+      --aggressive-filter    Enable aggressive filtering for maximum performance
+      --max-file-size <KB>  Maximum file size to process in KB [default: 1024]
+      --min-file-size <BYTES> Minimum file size to process in bytes [default: 1]
+      --include-tests       Include test directories in analysis
+      --include-docs        Include documentation directories in analysis
+      --include-hidden      Include hidden files and directories
+      --exclude-pattern <PATTERN>  Exclude files matching this pattern (glob)
+      --include-pattern <PATTERN>  Only include files matching this pattern (glob)
+
+  # Language Options
+      --language <LANG>     Only analyze files of specific language
+      --exclude-language <LANG>  Exclude specific language from analysis
+
+  # Analysis Options
+      --ignore-whitespace   Ignore whitespace-only lines in code analysis
+      --count-generated     Include generated files in analysis
+      --max-line-length <LENGTH>  Maximum line length to consider (0 = unlimited) [default: 0]
+
+  # Debug and Logging
+  -d, --debug              Enable debug output
+      --trace              Enable trace-level logging
+      --log-file <FILE>    Write logs to file
+
+  # Advanced Options
+      --threads <COUNT>     Number of worker threads (0 = auto) [default: 0]
+      --memory-limit <MB>   Memory limit in MB (0 = unlimited) [default: 0]
+      --cache-dir <DIR>    Directory for caching downloaded files
+      --no-cache           Disable caching of downloaded files
+
+  # Experimental Features
+      --experimental-parallel    Enable experimental parallel processing
+      --experimental-streaming  Enable experimental streaming analysis
+
+  # General
+  -v, --version           Print version
+  -h, --help             Print help
 ```
 
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/zmh-program/bytes-radar.git
-cd bytes-radar
-
-# Install dependencies
-cargo build
-
-# Run tests
-cargo test --all-features
-
-# Format code
-cargo fmt
-
-# Lint code
-cargo clippy --all-targets --all-features
-```
+See [CLI USAGE GUIDE](docs/CLI_USAGE.md) for more detailed usage examples and advanced configurations.
 
 ## Deployment
 
@@ -244,10 +171,8 @@ cargo clippy --all-targets --all-features
 > [!TIP]
 > The Free Tier of Cloudflare Workers has a **20s request timeout limit** (wall time). Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
 
-For detailed deployment instructions and API documentation, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+For detailed deployment instructions and API documentation, see [DEPLOYMENT GUIDE](docs/DEPLOYMENT.md).
 
-## Usage Environments
+## Contributing
 
-### CLI
-
-See the CLI Options section below for command-line usage.
+We welcome contributions! Please see [CONTRIBUTING GUIDE](docs/CONTRIBUTING.md) for guidelines.
