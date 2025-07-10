@@ -6,6 +6,7 @@ use crate::core::{analysis::ProjectAnalysis, error::Result, filter::IntelligentF
 use providers::*;
 use reqwest::Client;
 use std::collections::HashMap;
+use std::sync::Arc;
 use traits::{GitProvider, NoOpProgressHook};
 
 pub use traits::{ParsedRepository, ProgressHook, ProviderConfig};
@@ -35,7 +36,7 @@ pub struct RemoteAnalyzer {
     providers: Vec<Box<dyn GitProvider>>,
     global_config: ProviderConfig,
     filter: IntelligentFilter,
-    progress_hook: Box<dyn ProgressHook>,
+    progress_hook: Arc<dyn ProgressHook>,
     provider_configs: HashMap<String, ProviderConfig>,
 }
 
@@ -46,7 +47,7 @@ impl RemoteAnalyzer {
             providers: Vec::new(),
             global_config: ProviderConfig::default(),
             filter: IntelligentFilter::default(),
-            progress_hook: Box::new(NoOpProgressHook),
+            progress_hook: Arc::new(NoOpProgressHook),
             provider_configs: HashMap::new(),
         };
 
@@ -92,7 +93,7 @@ impl RemoteAnalyzer {
     /// analyzer.set_progress_hook(MyHook);
     /// ```
     pub fn set_progress_hook<H: ProgressHook + 'static>(&mut self, hook: H) {
-        self.progress_hook = Box::new(hook);
+        self.progress_hook = Arc::new(hook);
     }
 
     /// Set global configuration that applies to all providers
@@ -430,21 +431,28 @@ impl RemoteAnalyzer {
         self.progress_hook.on_download_progress(0, total_size);
 
         let stream = response.bytes_stream();
+        let progress_hook = Arc::clone(&self.progress_hook);
         let stream_reader = stream::StreamReader::new(
             stream,
-            Box::new(|_downloaded, _total| {
-                // Progress handled by progress hook in stream processing
+            Box::new(move |downloaded, total| {
+                progress_hook.on_download_progress(downloaded, total);
+                log::debug!(
+                    "Downloaded: {} bytes of {} total",
+                    downloaded,
+                    total
+                        .map(|t| t.to_string())
+                        .unwrap_or_else(|| "unknown".to_string())
+                );
             }),
             total_size,
         );
 
-        self.progress_hook
-            .on_processing_start("Processing archive...");
+        self.progress_hook.on_processing_start("Processing...");
         stream::process_tarball_stream(
             stream_reader,
             &mut project_analysis,
             &self.filter,
-            &*self.progress_hook,
+            self.progress_hook.as_ref(),
         )
         .await?;
 

@@ -10,10 +10,11 @@ pub fn create_progress_bar(show_progress: bool) -> Option<ProgressBar> {
     let pb = ProgressBar::new(0);
     pb.set_style(
         ProgressStyle::default_spinner()
-            .template("[{elapsed_precise}] {spinner:.green} {decimal_bytes_per_sec} {msg}")
+            .template("[{elapsed_precise}] {spinner:.green} {msg} ({decimal_bytes_per_sec})")
             .unwrap_or_else(|_| ProgressStyle::default_spinner()),
     );
     pb.set_message("Preparing...");
+    pb.enable_steady_tick(Duration::from_millis(120));
     Some(pb)
 }
 
@@ -84,6 +85,12 @@ impl ProgressHook for ProgressBarHook {
             self.progress_bar.set_length(total_size);
             self.progress_bar.set_position(downloaded);
         } else {
+            self.progress_bar.set_style(
+                ProgressStyle::default_spinner()
+                    .template("[{elapsed_precise}] {spinner:.green} {msg} ({decimal_bytes_per_sec})")
+                    .unwrap_or_else(|_| ProgressStyle::default_spinner()),
+            );
+            self.progress_bar.set_position(downloaded);
             let formatted = format_bytes(downloaded);
             self.progress_bar
                 .set_message(format!("Downloaded {}...", formatted));
