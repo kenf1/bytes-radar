@@ -45,13 +45,14 @@ EXAMPLES:
         .args(&["quiet", "debug"])
         .multiple(false)
 ))]
+#[non_exhaustive]
 pub struct Cli {
     #[arg(help = "Repository URL to analyze (user/repo, user/repo@branch, or full URL)")]
     pub url: Option<String>,
 
     // Version
     #[arg(short = 'v', long = "version", action = clap::ArgAction::Version, help = "Print version information")]
-    _version: (),
+    version: (),
 
     // Output Options
     #[arg(

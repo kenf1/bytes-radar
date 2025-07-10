@@ -23,9 +23,11 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
     } else if let Some(aggressive) = opts.aggressive_filtering {
         analyzer.set_aggressive_filtering(aggressive);
     } else {
-        let mut filter = IntelligentFilter::default();
-        filter.max_file_size = opts.max_file_size as u64;
-        filter.ignore_hidden = opts.ignore_hidden;
+        let filter = IntelligentFilter {
+            max_file_size: opts.max_file_size as u64,
+            ignore_hidden: opts.ignore_hidden,
+            ..IntelligentFilter::default()
+        };
         analyzer.set_filter(filter);
     }
 

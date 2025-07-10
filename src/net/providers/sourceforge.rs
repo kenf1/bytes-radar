@@ -73,7 +73,7 @@ impl GitProvider for SourceForgeProvider {
             return parsed.project_name;
         }
 
-        if let Some(filename) = url.split('/').last() {
+        if let Some(filename) = url.split('/').next_back() {
             if filename.ends_with(".tar.gz") {
                 return filename.trim_end_matches(".tar.gz").to_string();
             }

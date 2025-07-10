@@ -507,7 +507,7 @@ impl RemoteAnalyzer {
     fn extract_project_name_from_url(&self, url: &str) -> String {
         let url_path = url.trim_end_matches('/');
 
-        if let Some(filename) = url_path.split('/').last() {
+        if let Some(filename) = url_path.split('/').next_back() {
             if filename.ends_with(".tar.gz") {
                 return filename.trim_end_matches(".tar.gz").to_string();
             }

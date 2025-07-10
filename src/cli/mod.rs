@@ -26,7 +26,7 @@ pub async fn run() -> Result<()> {
     init_logging(&cli)?;
 
     let mut cli = cli;
-    if let Some(token) = std::env::var("BRADAR_TOKEN").ok() {
+    if let Ok(token) = std::env::var("BRADAR_TOKEN") {
         if cli.token.is_none() {
             cli.token = Some(token);
         }
@@ -122,10 +122,12 @@ fn configure_analyzer_filters(analyzer: &mut RemoteAnalyzer, cli: &Cli) -> Resul
     if cli.aggressive_filter {
         analyzer.set_aggressive_filtering(true);
     } else {
-        let mut filter = filter::IntelligentFilter::default();
-        filter.max_file_size = cli.max_file_size * 1024;
-        filter.ignore_test_dirs = !cli.include_tests;
-        filter.ignore_docs_dirs = !cli.include_docs;
+        let filter = filter::IntelligentFilter {
+            max_file_size: cli.max_file_size * 1024,
+            ignore_test_dirs: !cli.include_tests,
+            ignore_docs_dirs: !cli.include_docs,
+            ..filter::IntelligentFilter::default()
+        };
 
         analyzer.set_filter(filter);
     }

@@ -37,7 +37,7 @@ impl GitProvider for ArchiveProvider {
             return None;
         }
 
-        let filename = url.split('/').last()?;
+        let filename = url.split('/').next_back()?;
         let name = self.extract_name_from_filename(filename);
 
         Some(
@@ -63,7 +63,7 @@ impl GitProvider for ArchiveProvider {
     }
 
     fn get_project_name(&self, url: &str) -> String {
-        if let Some(filename) = url.split('/').last() {
+        if let Some(filename) = url.split('/').next_back() {
             return self.extract_name_from_filename(filename);
         }
 

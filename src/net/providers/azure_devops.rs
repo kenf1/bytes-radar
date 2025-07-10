@@ -82,7 +82,7 @@ impl GitProvider for AzureDevOpsProvider {
             return parsed.project_name;
         }
 
-        if let Some(filename) = url.split('/').last() {
+        if let Some(filename) = url.split('/').next_back() {
             if filename.ends_with(".zip") {
                 return filename.trim_end_matches(".zip").to_string();
             }

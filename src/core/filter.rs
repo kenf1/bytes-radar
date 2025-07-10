@@ -272,6 +272,12 @@ pub struct FilterStats {
     pub bytes_saved: u64,
 }
 
+impl Default for FilterStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FilterStats {
     pub fn new() -> Self {
         Self {

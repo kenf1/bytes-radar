@@ -260,7 +260,6 @@ pub fn print_toml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
     println!("{}", toml);
     Ok(())
 }
-
 fn xml_escape(text: &str) -> String {
     text.replace("&", "&amp;")
         .replace("<", "&lt;")
@@ -268,3 +267,4 @@ fn xml_escape(text: &str) -> String {
         .replace("\"", "&quot;")
         .replace("'", "&apos;")
 }
+

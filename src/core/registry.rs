@@ -4,20 +4,15 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::path::Path;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum LanguageType {
+    #[default]
     Programming,
     Markup,
     Data,
     Configuration,
     Documentation,
     Other,
-}
-
-impl Default for LanguageType {
-    fn default() -> Self {
-        LanguageType::Programming
-    }
 }
 
 impl Display for LanguageType {
@@ -33,16 +28,11 @@ impl Display for LanguageType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum LineCommentPosition {
+    #[default]
     Any,
     Start,
-}
-
-impl Default for LineCommentPosition {
-    fn default() -> Self {
-        LineCommentPosition::Any
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
