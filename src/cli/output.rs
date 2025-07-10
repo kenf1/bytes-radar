@@ -209,7 +209,7 @@ pub fn print_xml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
     println!("  <language_statistics>");
     for stats in language_stats {
         println!("    <language>");
-        println!("      <name>{}</name>", xml_escape(&stats.language_name));
+        println!("      <n>{}</n>", xml_escape(&stats.language_name));
         println!("      <file_count>{}</file_count>", stats.file_count);
         println!("      <total_lines>{}</total_lines>", stats.total_lines);
         println!("      <code_lines>{}</code_lines>", stats.code_lines);
@@ -227,6 +227,20 @@ pub fn print_xml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
     println!("  </language_statistics>");
 
     println!("</project_analysis>");
+    Ok(())
+}
+
+pub fn print_yaml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
+    let yaml = serde_yaml::to_string(project_analysis)
+        .map_err(|e| crate::core::error::AnalysisError::invalid_statistics(e.to_string()))?;
+    println!("{}", yaml);
+    Ok(())
+}
+
+pub fn print_toml_format(project_analysis: &ProjectAnalysis) -> Result<()> {
+    let toml = toml::to_string_pretty(project_analysis)
+        .map_err(|e| crate::core::error::AnalysisError::invalid_statistics(e.to_string()))?;
+    println!("{}", toml);
     Ok(())
 }
 

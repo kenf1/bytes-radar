@@ -23,10 +23,13 @@ pub use args::{Cli, OutputFormat};
 pub async fn run() -> Result<()> {
     let cli = args::Cli::parse();
 
-    if cli.debug {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
-    } else {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    init_logging(&cli)?;
+
+    let mut cli = cli;
+    if let Some(token) = std::env::var("BRADAR_TOKEN").ok() {
+        if cli.token.is_none() {
+            cli.token = Some(token);
+        }
     }
 
     match &cli.url {
@@ -39,10 +42,39 @@ pub async fn run() -> Result<()> {
 }
 
 #[cfg(feature = "cli")]
+fn init_logging(cli: &Cli) -> Result<()> {
+    let log_level = if cli.trace {
+        "trace"
+    } else if cli.debug {
+        "debug"
+    } else {
+        "warn"
+    };
+
+    let mut builder =
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level));
+
+    if let Some(log_file) = &cli.log_file {
+        use std::fs::OpenOptions;
+
+        let target = Box::new(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(log_file)
+                .map_err(|e| crate::core::error::AnalysisError::file_read(log_file, e))?,
+        );
+        builder.target(env_logger::Target::Pipe(target));
+    }
+
+    builder.init();
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
 async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
-    let format = cli.format.as_ref().unwrap_or(&OutputFormat::Table);
     let should_show_progress =
-        !cli.no_progress && matches!(format, OutputFormat::Table) && !cli.quiet;
+        !cli.no_progress && matches!(cli.format, OutputFormat::Table) && !cli.quiet;
 
     let processed_url = url_parser::expand_url(url);
 
@@ -68,15 +100,7 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
         analyzer.set_progress_hook(progress::ProgressBarHook::new(pb));
     }
 
-    if cli.aggressive_filter {
-        analyzer.set_aggressive_filtering(true);
-    } else {
-        let mut filter = filter::IntelligentFilter::default();
-        filter.max_file_size = cli.max_file_size * 1024;
-        filter.ignore_test_dirs = !cli.include_tests;
-        filter.ignore_docs_dirs = !cli.include_docs;
-        analyzer.set_filter(filter);
-    }
+    configure_analyzer_filters(&mut analyzer, cli)?;
 
     let project_analysis = analyzer.analyze_url(&processed_url).await?;
 
@@ -88,13 +112,38 @@ async fn analyze_remote_archive(url: &str, cli: &Cli) -> Result<()> {
 
     progress::show_completion_message(elapsed, cli.quiet);
 
-    match format {
+    output_results(&project_analysis, cli)?;
+
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn configure_analyzer_filters(analyzer: &mut RemoteAnalyzer, cli: &Cli) -> Result<()> {
+    if cli.aggressive_filter {
+        analyzer.set_aggressive_filtering(true);
+    } else {
+        let mut filter = filter::IntelligentFilter::default();
+        filter.max_file_size = cli.max_file_size * 1024;
+        filter.ignore_test_dirs = !cli.include_tests;
+        filter.ignore_docs_dirs = !cli.include_docs;
+
+        analyzer.set_filter(filter);
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn output_results(project_analysis: &analysis::ProjectAnalysis, cli: &Cli) -> Result<()> {
+    match cli.format {
         OutputFormat::Table => {
-            output::print_table_format(&project_analysis, cli.detailed, cli.quiet);
+            output::print_table_format(project_analysis, cli.detailed, cli.quiet);
         }
-        OutputFormat::Json => output::print_json_format(&project_analysis)?,
-        OutputFormat::Csv => output::print_csv_format(&project_analysis)?,
-        OutputFormat::Xml => output::print_xml_format(&project_analysis)?,
+        OutputFormat::Json => output::print_json_format(project_analysis)?,
+        OutputFormat::Csv => output::print_csv_format(project_analysis)?,
+        OutputFormat::Xml => output::print_xml_format(project_analysis)?,
+        OutputFormat::Yaml => output::print_yaml_format(project_analysis)?,
+        OutputFormat::Toml => output::print_toml_format(project_analysis)?,
     }
 
     Ok(())

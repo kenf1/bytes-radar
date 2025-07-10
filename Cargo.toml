@@ -23,7 +23,7 @@ exclude = [
 
 [features]
 default = ["cli"]
-cli = ["colored", "env_logger", "clap", "indicatif"]
+cli = ["colored", "env_logger", "clap", "indicatif", "serde_yaml", "toml"]
 worker = ["wasm-bindgen", "web-sys", "js-sys", "wasm-bindgen-futures", "serde-wasm-bindgen"]
 
 [lib]
@@ -48,6 +48,8 @@ colored = { version = "2.2", optional = true }
 env_logger = { version = "0.11", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 indicatif = { version = "0.17", optional = true }
+serde_yaml = { version = "0.9", optional = true }
+toml = { version = "0.8", optional = true }
 
 # WASM dependencies
 wasm-bindgen = { version = "0.2", optional = true }
