@@ -169,7 +169,7 @@ See [CLI USAGE GUIDE](docs/CLI_USAGE.md) for more detailed usage examples and ad
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar)
 
 > [!TIP]
-> The Free Tier of Cloudflare Workers has a **20s request timeout limit** (wall time). Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
+> The Free Tier of Cloudflare Workers has a **20s request timeout limit** (wall time). Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative methods for processing large repositories.
 
 For detailed deployment instructions and API documentation, see [DEPLOYMENT GUIDE](docs/DEPLOYMENT.md).
 

@@ -175,19 +175,6 @@ Releases are handled by maintainers:
 3. Create git tag
 4. GitHub Actions builds and publishes
 
-## Project Structure
-
-```
-bytes-radar/
-├── .github/              # GitHub workflows and templates
-├── src/
-│   ├── cli/             # Command-line interface
-│   ├── core/            # Core analysis logic
-│   └── lib.rs           # Library entry point
-├── tests/               # Integration tests
-└── examples/            # Usage examples
-```
-
 ## Areas for Contribution
 
 We welcome contributions in these areas:

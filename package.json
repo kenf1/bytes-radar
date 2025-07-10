@@ -6,7 +6,7 @@
     "build": "node build.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "deploy:prod": "node server/build.js && wrangler deploy",
+    "deploy:prod": "node worker/build.js && wrangler deploy",
     "prettier": "prettier --write . && cargo fmt"
   },
   "dependencies": {

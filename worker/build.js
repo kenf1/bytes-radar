@@ -34,13 +34,13 @@ try {
   );
 }
 
-if (!fs.existsSync("server/pkg")) {
-  fs.mkdirSync("server/pkg", { recursive: true });
+if (!fs.existsSync("worker/pkg")) {
+  fs.mkdirSync("worker/pkg", { recursive: true });
 }
 
 console.log("Building WebAssembly module...");
 execSync(
-  "wasm-pack build --target web --out-dir server/pkg --no-default-features --features worker",
+  "wasm-pack build --target web --out-dir worker/pkg --no-default-features --features worker",
   {
     stdio: "inherit",
     cwd: process.cwd(),
@@ -59,7 +59,7 @@ export function analyze_url(url: string, options: AnalyzeOptions): Promise<any>;
 `;
 
 fs.writeFileSync(
-  path.join(process.cwd(), "server/pkg", "bytes_radar.d.ts"),
+  path.join(process.cwd(), "worker/pkg", "bytes_radar.d.ts"),
   typesContent,
 );
 

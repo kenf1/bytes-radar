@@ -5,11 +5,9 @@
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar)
 
 > [!TIP]
-> The Free Tier of Cloudflare Workers has a **20s request timeout limit**. Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative deployment methods for processing large repositories.
+> The Free Tier of Cloudflare Workers has a **20s request timeout limit**. Analysis of large repositories may fail due to this limitation. Consider upgrading to Cloudflare Workers Pro or using alternative methods for processing large repositories.
 
-The server component is automatically built and pushed to the `cf-worker` branch whenever changes are made to the server code. You can deploy to Cloudflare Workers with one click using the button above. This will:
-
-1. Fork the repository to your GitHub account (using the pre-built worker from cf-worker branch)
+1. Fork the repository to your GitHub account
 2. Connect it to your Cloudflare Workers account
 3. Deploy the worker to your chosen environment
 
@@ -17,11 +15,11 @@ The server component is automatically built and pushed to the `cf-worker` branch
 
 If you prefer to deploy manually:
 
-1. Clone the cf-worker branch which contains the pre-built worker:
+1. Clone the repository
 
 ```bash
-git clone -b cf-worker https://github.com/zmh-program/bytes-radar.git
-cd bytes-radar/server
+git clone https://github.com/zmh-program/bytes-radar.git
+cd bytes-radar/worker
 ```
 
 2. Install Wrangler CLI:
@@ -55,7 +53,7 @@ The worker supports two environments:
 - `staging`: For testing and development (bytes-radar-staging.workers.dev)
 - `production`: For production use (bytes-radar-prod.workers.dev)
 
-See `server/wrangler.toml` for environment-specific configurations.
+See `worker/wrangler.toml` for environment-specific configurations.
 
 ## API Documentation
 
@@ -159,14 +157,3 @@ GET /zmh-program/bytes-radar
   }
 }
 ```
-
-### Rate Limits and Timeouts
-
-- Request timeout: 20~30 seconds (Free tier)
-- Rate limits: Based on Cloudflare Workers limits
-
-### Notes
-
-- Large repositories may hit the 20-second timeout limit on the free tier
-- For analyzing large repositories, consider using the CLI tool or upgrading to Cloudflare Workers Pro
-- The service automatically tries common branch names (main, master, develop, dev) if not specified
