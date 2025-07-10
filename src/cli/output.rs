@@ -5,7 +5,7 @@ use colored::Colorize;
 fn get_percentage_color(percentage: f64) -> colored::ColoredString {
     let percentage_str = format!("{:.1}%", percentage);
     if percentage >= 50.0 {
-        percentage_str.red()
+        percentage_str.bright_green()
     } else if percentage >= 10.0 {
         percentage_str.yellow()
     } else if percentage >= 1.0 {
@@ -64,12 +64,12 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
     println!(
         " {:<56} {}",
         "Code Ratio",
-        get_percentage_color(summary.overall_complexity_ratio * 100.0)
+        format!("{:.1}%", summary.overall_complexity_ratio * 100.0).bold()
     );
     println!(
         " {:<56} {}",
         "Documentation",
-        get_percentage_color(summary.overall_documentation_ratio * 100.0)
+        format!("{:.1}%", summary.overall_documentation_ratio * 100.0).bold()
     );
 
     if !language_stats.is_empty() && !quiet {
