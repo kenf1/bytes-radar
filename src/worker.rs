@@ -1,7 +1,12 @@
+use crate::core::error::AnalysisError;
 use crate::net::ProviderConfig;
 use crate::{core::filter::IntelligentFilter, net::RemoteAnalyzer};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
+
+fn console(message: &str) {
+    web_sys::console::log_1(&message.into());
+}
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct AnalysisOptions {
@@ -109,10 +114,6 @@ impl AnalysisOptions {
     }
 }
 
-fn console(message: &str) {
-    web_sys::console::log_1(&message.into());
-}
-
 fn create_wasm_result(analysis: &crate::core::analysis::ProjectAnalysis) -> WASMAnalysisResult {
     WASMAnalysisResult {
         project_name: analysis.project_name.clone(),
@@ -125,10 +126,10 @@ fn create_wasm_result(analysis: &crate::core::analysis::ProjectAnalysis) -> WASM
     }
 }
 
-fn create_error_result(error: crate::core::error::AnalysisError, url: String) -> WASMErrorResult {
+fn create_error_result(error: AnalysisError, url: String) -> WASMErrorResult {
     let error_type = match error {
-        crate::core::error::AnalysisError::NetworkError { .. } => "NetworkError",
-        _ => "AnalysisError",
+        AnalysisError::NetworkError { .. } => "network_error",
+        _ => "analysis_error",
     };
 
     WASMErrorResult {

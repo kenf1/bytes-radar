@@ -179,7 +179,11 @@ GET /zmh-program/bytes-radar?max_file_size=1048576&timeout=60&header.Authorizati
 ```json
 {
   "error": "Error message",
-  "error_type": "NetworkError | AnalysisError",
-  "url": "Original request URL"
+  "error_type": "network_error | analysis_error",
+  "url": "Original request URL",
+  "debug_info": {
+    "total_languages": 0,
+    "total_files": 0
+  }
 }
 ```

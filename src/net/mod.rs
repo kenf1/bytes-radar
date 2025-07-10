@@ -2,7 +2,11 @@ pub mod providers;
 pub mod stream;
 pub mod traits;
 
-use crate::core::{analysis::ProjectAnalysis, error::Result, filter::IntelligentFilter};
+use crate::core::{
+    analysis::ProjectAnalysis,
+    error::{AnalysisError, Result},
+    filter::IntelligentFilter,
+};
 use providers::*;
 use reqwest::Client;
 use std::collections::HashMap;
@@ -269,7 +273,7 @@ impl RemoteAnalyzer {
     /// }
     /// ```
     pub async fn analyze_url(&self, url: &str) -> Result<ProjectAnalysis> {
-        let expanded_url = self.expand_url(url);
+        let expanded_url = self.expand_url(url.trim());
 
         // Try direct archive first for better performance
         if expanded_url.ends_with(".tar.gz") || expanded_url.ends_with(".tgz") {
@@ -280,24 +284,12 @@ impl RemoteAnalyzer {
         for provider in &self.providers {
             if provider.can_handle(&expanded_url) {
                 if let Some(parsed) = provider.parse_url(&expanded_url) {
-                    match self.analyze_with_provider(provider.as_ref(), &parsed).await {
-                        Ok(analysis) => return Ok(analysis),
-                        Err(e) => {
-                            #[cfg(feature = "cli")]
-                            log::debug!(
-                                "Provider {} failed for {}: {}",
-                                provider.name(),
-                                expanded_url,
-                                e
-                            );
-                            continue;
-                        }
-                    }
+                    return self.analyze_with_provider(provider.as_ref(), &parsed).await;
                 }
             }
         }
 
-        Err(crate::core::error::AnalysisError::url_parsing(format!(
+        Err(AnalysisError::url_parsing(format!(
             "Unsupported URL format: {}. Supported formats include GitHub, GitLab, Bitbucket, Codeberg, Gitea, SourceForge, Azure DevOps, and direct archive URLs.",
             expanded_url
         )))
@@ -320,7 +312,6 @@ impl RemoteAnalyzer {
                 "dev".to_string(),
             ];
 
-            // Try to get default branch from API
             let config = self.get_effective_config(provider.name());
             if let Ok(client) = provider.build_client(&config) {
                 if let Some(default_branch) = provider.get_default_branch(&client, parsed).await {
@@ -329,7 +320,6 @@ impl RemoteAnalyzer {
                 }
             }
 
-            // Generate URLs for each branch
             for branch in branches {
                 let mut branch_parsed = parsed.clone();
                 branch_parsed.branch_or_commit = Some(branch);
@@ -337,7 +327,7 @@ impl RemoteAnalyzer {
             }
         }
 
-        // Try each download URL
+        let mut failed_reasons: Vec<String> = Vec::new();
         for download_url in download_urls {
             match self
                 .analyze_direct_tarball_with_name(&download_url, &parsed.project_name)
@@ -345,16 +335,28 @@ impl RemoteAnalyzer {
             {
                 Ok(analysis) => return Ok(analysis),
                 Err(e) => {
+                    let reason = format!("Failed to download from {}: {}", download_url, e);
+                    failed_reasons.push(reason.clone());
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        web_sys::console::log_1(&reason.into());
+                    }
+
                     #[cfg(feature = "cli")]
-                    log::debug!("Failed to download from {}: {}", download_url, e);
+                    {
+                        log::debug!("Download failed: {}", reason);
+                    }
+
                     continue;
                 }
             }
         }
 
-        Err(crate::core::error::AnalysisError::network(
-            "All download URLs failed".to_string(),
-        ))
+        Err(AnalysisError::network(format!(
+            "All download URLs failed. \n{}",
+            failed_reasons.join("\n")
+        )))
     }
 
     /// Get effective configuration for a provider
