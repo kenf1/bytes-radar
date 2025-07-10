@@ -87,7 +87,9 @@ impl ProgressHook for ProgressBarHook {
         } else {
             self.progress_bar.set_style(
                 ProgressStyle::default_spinner()
-                    .template("[{elapsed_precise}] {spinner:.green} {msg} ({decimal_bytes_per_sec})")
+                    .template(
+                        "[{elapsed_precise}] {spinner:.green} {msg} ({decimal_bytes_per_sec})",
+                    )
                     .unwrap_or_else(|_| ProgressStyle::default_spinner()),
             );
             self.progress_bar.set_position(downloaded);

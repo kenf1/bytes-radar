@@ -11,4 +11,4 @@ declare module "*.wasm?module" {
 declare module "*.wasm?url" {
   const content: string;
   export default content;
-} 
+}

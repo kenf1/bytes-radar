@@ -2,6 +2,23 @@ use super::progress::format_number;
 use crate::core::{analysis::ProjectAnalysis, error::Result};
 use colored::Colorize;
 
+fn get_percentage_color(percentage: f64) -> colored::ColoredString {
+    let percentage_str = format!("{:.1}%", percentage);
+    if percentage >= 50.0 {
+        percentage_str.red()
+    } else if percentage >= 10.0 {
+        percentage_str.yellow()
+    } else if percentage >= 1.0 {
+        percentage_str.white()
+    } else {
+        percentage_str.dimmed()
+    }
+}
+
+fn color_number(num: usize) -> colored::ColoredString {
+    format_number(num).bright_white()
+}
+
 pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, quiet: bool) {
     let summary = project_analysis.get_summary();
     let language_stats = project_analysis.get_language_statistics();
@@ -14,59 +31,59 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
     println!(
         " {:<56} {}",
         "Total Files",
-        format_number(summary.total_files)
+        color_number(summary.total_files)
     );
     println!(
         " {:<56} {}",
         "Total Lines",
-        format_number(summary.total_lines)
+        color_number(summary.total_lines)
     );
     println!(
         " {:<56} {}",
         "Code Lines",
-        format_number(summary.total_code_lines)
+        color_number(summary.total_code_lines)
     );
     println!(
         " {:<56} {}",
         "Comment Lines",
-        format_number(summary.total_comment_lines)
+        color_number(summary.total_comment_lines)
     );
     println!(
         " {:<56} {}",
         "Blank Lines",
-        format_number(summary.total_blank_lines)
+        color_number(summary.total_blank_lines)
     );
     println!(
         " {:<56} {}",
         "Languages",
-        format_number(summary.language_count)
+        color_number(summary.language_count)
     );
     if let Some(ref primary) = summary.primary_language {
         println!(" {:<56} {}", "Primary Language", primary);
     }
     println!(
-        " {:<56} {:.1}%",
+        " {:<56} {}",
         "Code Ratio",
-        summary.overall_complexity_ratio * 100.0
+        get_percentage_color(summary.overall_complexity_ratio * 100.0)
     );
     println!(
-        " {:<56} {:.1}%",
+        " {:<56} {}",
         "Documentation",
-        summary.overall_documentation_ratio * 100.0
+        get_percentage_color(summary.overall_documentation_ratio * 100.0)
     );
 
     if !language_stats.is_empty() && !quiet {
         println!("{}", "=".repeat(80));
 
         println!(
-            " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>8}",
+            " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7}",
             "Language".bold(),
             "Files",
             "Lines",
             "Code",
             "Comments",
             "Blanks",
-            "Share%"
+            "%"
         );
         println!("{}", "=".repeat(80));
 
@@ -78,27 +95,27 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
             };
 
             println!(
-                " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
+                " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7}",
                 stats.language_name,
-                format_number(stats.file_count),
-                format_number(stats.total_lines),
-                format_number(stats.code_lines),
-                format_number(stats.comment_lines),
-                format_number(stats.blank_lines),
-                share_percentage
+                color_number(stats.file_count),
+                color_number(stats.total_lines),
+                color_number(stats.code_lines),
+                color_number(stats.comment_lines),
+                color_number(stats.blank_lines),
+                get_percentage_color(share_percentage)
             );
         }
 
         println!("{}", "=".repeat(80));
         println!(
-            " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7.1}%",
+            " {:<20} {:>8} {:>12} {:>8} {:>10} {:>8} {:>7}",
             "Total".bold(),
-            format_number(summary.total_files),
-            format_number(summary.total_lines),
-            format_number(summary.total_code_lines),
-            format_number(summary.total_comment_lines),
-            format_number(summary.total_blank_lines),
-            100.0
+            color_number(summary.total_files),
+            color_number(summary.total_lines),
+            color_number(summary.total_code_lines),
+            color_number(summary.total_comment_lines),
+            color_number(summary.total_blank_lines),
+            "%"
         );
     }
 
@@ -114,9 +131,9 @@ pub fn print_table_format(project_analysis: &ProjectAnalysis, detailed: bool, qu
                     println!(
                         "   {:<50} {:>6} lines ({} code, {} comments)",
                         file.file_path,
-                        format_number(file.total_lines),
-                        format_number(file.code_lines),
-                        format_number(file.comment_lines)
+                        color_number(file.total_lines),
+                        color_number(file.code_lines),
+                        color_number(file.comment_lines)
                     );
                 }
             }

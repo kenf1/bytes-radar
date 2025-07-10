@@ -7,7 +7,7 @@
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button.svg)](https://deploy.workers.cloudflare.com/?url=https://github.com/zmh-program/bytes-radar)
 
-Hyper-fast **CLOC** *(\*count lines of code)* tool for remote repositories.
+Hyper-fast **CLOC** _(\*count lines of code)_ tool for remote repositories.
 
 ![Banner](docs/banner.jpg)
 
@@ -117,6 +117,7 @@ See the CLI Options section below for command-line usage.
 ## Output Formats
 
 ### Table (Default)
+
 ```shell
 $ bradar torvalds/linux
 Analyzing: https://github.com/torvalds/linux
@@ -134,7 +135,7 @@ Analysis completed in 123.76s
  Code Ratio                                               80.4%
  Documentation                                            8.8%
 ================================================================================
- Language                Files        Lines     Code   Comments   Blanks   Share%
+ Language                Files        Lines     Code   Comments   Blanks       %
 ================================================================================
  C                      35,586   25,268,107 18,782,347  2,836,806 3,648,954    61.8%
  C Header               25,845   10,247,647 9,481,722          0  765,925    25.1%
@@ -164,6 +165,7 @@ Analysis completed in 123.76s
 ```
 
 ### JSON Output
+
 ```json
 {
   "project_name": "linux@master",
@@ -180,13 +182,13 @@ Analysis completed in 123.76s
 
 ## Supported Platforms
 
-| Platform | URL Format | Example |
-|----------|------------|---------|
-| **GitHub** | `user/repo` or full URL | `torvalds/linux` |
-| **GitLab** | Full URL | `https://gitlab.com/user/repo` |
-| **Bitbucket** | Full URL | `https://bitbucket.org/user/repo` |
-| **Codeberg** | Full URL | `https://codeberg.org/user/repo` |
-| **Direct** | tar.gz URL | `https://example.com/file.tar.gz` |
+| Platform      | URL Format              | Example                           |
+| ------------- | ----------------------- | --------------------------------- |
+| **GitHub**    | `user/repo` or full URL | `torvalds/linux`                  |
+| **GitLab**    | Full URL                | `https://gitlab.com/user/repo`    |
+| **Bitbucket** | Full URL                | `https://bitbucket.org/user/repo` |
+| **Codeberg**  | Full URL                | `https://codeberg.org/user/repo`  |
+| **Direct**    | tar.gz URL              | `https://example.com/file.tar.gz` |
 
 ## CLI Options
 
