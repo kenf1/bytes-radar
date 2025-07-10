@@ -321,15 +321,11 @@ impl RemoteAnalyzer {
             ];
 
             // Try to get default branch from API
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                let config = self.get_effective_config(provider.name());
-                if let Ok(client) = provider.build_client(&config) {
-                    if let Some(default_branch) = provider.get_default_branch(&client, parsed).await
-                    {
-                        branches.insert(0, default_branch);
-                        branches.dedup();
-                    }
+            let config = self.get_effective_config(provider.name());
+            if let Ok(client) = provider.build_client(&config) {
+                if let Some(default_branch) = provider.get_default_branch(&client, parsed).await {
+                    branches.insert(0, default_branch);
+                    branches.dedup();
                 }
             }
 

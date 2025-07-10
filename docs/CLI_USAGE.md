@@ -95,25 +95,37 @@ bradar [OPTIONS] <URL>
 
 ### Network Options
 
-| Option             | Description                                  | Default |
-| ------------------ | -------------------------------------------- | ------- |
-| `--timeout`        | Request timeout in seconds                   | `300`   |
-| `--allow-insecure` | Allow insecure HTTPS connections             | `false` |
-| `--user-agent`     | Custom User-Agent string                     |         |
-| `--retry-count`    | Number of retry attempts for failed requests | `3`     |
+| Option              | Description                                  | Default |
+| ------------------- | -------------------------------------------- | ------- |
+| `--timeout`         | Request timeout in seconds                   | `300`   |
+| `--allow-insecure`  | Allow insecure HTTPS connections             | `false` |
+| `--user-agent`      | Custom User-Agent string                     |         |
+| `--retry-count`     | Number of retry attempts for failed requests | `3`     |
+| `--max-redirects`   | Maximum number of redirects to follow        | `10`    |
+| `--use-compression` | Enable HTTP compression                      | `true`  |
+| `--proxy`           | Proxy URL for all requests                   |         |
+
+### Provider Configuration
+
+| Option               | Description                          | Example                            |
+| -------------------- | ------------------------------------ | ---------------------------------- |
+| `--provider-config`  | Provider-specific configuration file | `github-config.json`               |
+| `--provider-setting` | Set provider-specific setting        | `github.api_version=2022-11-28`    |
+| `--header`           | Add custom HTTP header               | `Accept=application/vnd.github.v3` |
+| `--credential`       | Set provider credential              | `token=ghp_xxx`                    |
 
 ### Filtering Options
 
-| Option                | Description                                         | Default |
-| --------------------- | --------------------------------------------------- | ------- |
-| `--aggressive-filter` | Enable aggressive filtering for maximum performance | `false` |
-| `--max-file-size`     | Maximum file size to process in KB                  | `1024`  |
-| `--min-file-size`     | Minimum file size to process in bytes               | `1`     |
-| `--include-tests`     | Include test directories in analysis                | `false` |
-| `--include-docs`      | Include documentation directories in analysis       | `false` |
-| `--include-hidden`    | Include hidden files and directories                | `false` |
-| `--exclude-pattern`   | Exclude files matching this pattern (glob)          |         |
-| `--include-pattern`   | Only include files matching this pattern (glob)     |         |
+| Option                | Description                                         | Default  |
+| --------------------- | --------------------------------------------------- | -------- |
+| `--aggressive-filter` | Enable aggressive filtering for maximum performance | `false`  |
+| `--max-file-size`     | Maximum file size to process in KB                  | `102400` |
+| `--min-file-size`     | Minimum file size to process in bytes               | `1`      |
+| `--include-tests`     | Include test directories in analysis                | `false`  |
+| `--include-docs`      | Include documentation directories in analysis       | `false`  |
+| `--include-hidden`    | Include hidden files and directories                | `false`  |
+| `--exclude-pattern`   | Exclude files matching this pattern (glob)          |          |
+| `--include-pattern`   | Only include files matching this pattern (glob)     |          |
 
 ### Language Options
 
@@ -259,17 +271,36 @@ bradar --format csv --detailed user/repo > analysis.csv
 bradar --debug --log-file analysis.log --trace user/repo
 ```
 
+### Provider-Specific Configuration
+
+```bash
+# GitHub with custom API version
+bradar --provider-setting github.api_version=2022-11-28 user/repo
+
+# GitLab with custom instance
+bradar --provider-setting gitlab.instance=https://gitlab.company.com user/repo
+
+# Custom headers for enterprise instances
+bradar --header "Authorization=Bearer token" --header "Accept=application/json" user/repo
+
+# Multiple provider credentials
+bradar --credential "github.token=ghp_xxx" --credential "gitlab.token=glpat_xxx" user/repo
+```
+
 ### Network Configuration
 
 ```bash
-# Custom timeout and retry settings
-bradar --timeout 600 --retry-count 5 slow-server/repo
+# Custom timeout and compression
+bradar --timeout 600 --use-compression false slow-server/repo
 
-# Custom User-Agent
-bradar --user-agent "MyAnalyzer/1.0" user/repo
+# Using a proxy
+bradar --proxy http://proxy.company.com:8080 user/repo
 
-# Allow insecure connections
-bradar --allow-insecure https://insecure-server.com/repo.tar.gz
+# Custom redirect handling
+bradar --max-redirects 5 user/repo
+
+# Enterprise setup with custom headers
+bradar --header "X-Custom-Auth=token" --allow-insecure https://git.company.com/repo
 ```
 
 ## Environment Variables

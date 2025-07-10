@@ -21,6 +21,9 @@ Hyper-fast **CLOC** _(\*count lines of code)_ tool for remote repositories.
 - OAuth token management for private repository access
 - Native binaries for Linux, macOS and Windows
 - Experimental parallel processing and streaming analysis
+- Extensive provider configuration with custom headers, credentials, and settings
+- Advanced network configuration with proxy support and compression control
+- Intelligent file filtering with customizable rules and .gitignore support
 
 ## Supported Platforms
 
@@ -70,21 +73,46 @@ bradar https://bitbucket.org/atlassian/stash
 bradar https://codeberg.org/forgejo/forgejo
 ```
 
+#### Provider Configuration
+
+Configure provider-specific settings and authentication:
+
+```bash
+# GitHub Enterprise with custom API version
+bradar --provider-setting github.api_version=2022-11-28 \
+       --header "Accept=application/vnd.github.v3+json" \
+       https://github.company.com/org/repo
+
+# Multiple provider credentials
+bradar --credential "github.token=ghp_xxx" \
+       --credential "gitlab.token=glpat_xxx" \
+       user/repo
+```
+
+#### Network Configuration
+
+Configure network behavior and proxy settings:
+
+```bash
+# Using corporate proxy with custom timeout
+bradar --proxy http://proxy.company.com:8080 \
+       --timeout 600 \
+       --max-redirects 5 \
+       user/repo
+
+# Enterprise setup with custom headers
+bradar --header "X-Custom-Auth=token" \
+       --allow-insecure \
+       --use-compression false \
+       https://git.company.com/repo
+```
+
 #### Output Format Configuration
 
 Generate analysis results in structured data formats:
 
 ```bash
 bradar -f json torvalds/linux
-```
-
-#### Private Repository Access
-
-Authenticate with platform tokens for private repository analysis:
-
-```bash
-bradar --token ghp_xxxxxxxxxxxxxxxxxxxx private-org/confidential-repo
-bradar --token glpat-xxxxxxxxxxxxxxxxxxxx https://gitlab.com/private-group/project
 ```
 
 #### Performance and Output Control
@@ -112,18 +140,24 @@ OPTIONS:
       --no-progress          Disable progress bar
       --no-color             Disable colored output
 
-  # Authentication
-      --token <TOKEN>        Authentication token for private repositories
+  # Provider Configuration
+      --provider-config <FILE>  Provider-specific configuration file
+      --provider-setting <KEY=VALUE>  Set provider-specific setting
+      --header <NAME=VALUE>    Add custom HTTP header
+      --credential <KEY=VALUE> Set provider credential
 
   # Network Options
       --timeout <SECONDS>    Request timeout in seconds [default: 300]
+      --max-redirects <COUNT> Maximum number of redirects [default: 10]
       --allow-insecure       Allow insecure HTTPS connections
       --user-agent <STRING>  Custom User-Agent string
-      --retry-count <COUNT>  Number of retry attempts for failed requests [default: 3]
+      --use-compression     Enable HTTP compression [default: true]
+      --proxy <URL>         Proxy URL for all requests
+      --retry-count <COUNT>  Number of retry attempts [default: 3]
 
   # Filtering Options
       --aggressive-filter    Enable aggressive filtering for maximum performance
-      --max-file-size <KB>  Maximum file size to process in KB [default: 1024]
+      --max-file-size <KB>  Maximum file size to process in KB [default: 102400]
       --min-file-size <BYTES> Minimum file size to process in bytes [default: 1]
       --include-tests       Include test directories in analysis
       --include-docs        Include documentation directories in analysis
@@ -138,7 +172,7 @@ OPTIONS:
   # Analysis Options
       --ignore-whitespace   Ignore whitespace-only lines in code analysis
       --count-generated     Include generated files in analysis
-      --max-line-length <LENGTH>  Maximum line length to consider (0 = unlimited) [default: 0]
+      --max-line-length <LENGTH>  Maximum line length to consider [default: 0]
 
   # Debug and Logging
   -d, --debug              Enable debug output

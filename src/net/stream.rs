@@ -241,17 +241,6 @@ pub async fn process_tarball_stream(
                 project_analysis.add_file_metrics(metrics)?;
             }
         }
-
-        web_sys::console::log_1(
-            &format!(
-                "Filter stats: processed {}/{} files ({:.1}% filtered), saved {}",
-                stats.processed,
-                stats.total_entries,
-                stats.filter_ratio() * 100.0,
-                stats.format_bytes_saved()
-            )
-            .into(),
-        );
     }
 
     Ok(())

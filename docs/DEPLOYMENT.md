@@ -55,6 +55,32 @@ The worker supports two environments:
 
 See `worker/wrangler.toml` for environment-specific configurations.
 
+### Worker Configuration Options
+
+The worker supports extensive configuration through the `AnalysisOptions` object:
+
+```typescript
+interface AnalysisOptions {
+  // HTTP Configuration
+  timeout?: number; // Request timeout in seconds (default: 300)
+  max_redirects?: number; // Maximum number of redirects (default: 10)
+  user_agent?: string; // Custom User-Agent (default: "bytes-radar/1.0.0")
+  accept_invalid_certs: boolean; // Accept invalid SSL certificates (default: false)
+  headers: Record<string, string>; // Custom HTTP headers
+  credentials: Record<string, string>; // Authentication credentials
+  provider_settings: Record<string, string>; // Provider-specific settings
+  max_file_size?: number; // Maximum file size in bytes (default: 100MB)
+  use_compression: boolean; // Use HTTP compression (default: true)
+  proxy?: string; // Proxy URL
+
+  // Analysis Configuration
+  ignore_hidden: boolean; // Ignore hidden files (default: true)
+  ignore_gitignore: boolean; // Respect .gitignore rules (default: true)
+  aggressive_filtering?: boolean; // Use aggressive file filtering
+  custom_filter?: IntelligentFilter; // Custom file filtering rules
+}
+```
+
 ## API Documentation
 
 The Bytes Radar API provides code analysis capabilities through a simple HTTP interface.
@@ -84,14 +110,29 @@ Analyzes a repository and returns detailed statistics about its codebase.
 
 ##### Query Parameters
 
+All parameters from the `AnalysisOptions` interface are supported as query parameters:
+
 - `ignore_hidden` (boolean, default: true) - Whether to ignore hidden files/directories
 - `ignore_gitignore` (boolean, default: true) - Whether to respect .gitignore rules
-- `max_file_size` (number, default: -1) - Maximum file size to analyze in bytes (-1 for no limit)
+- `max_file_size` (number, default: 104857600) - Maximum file size to analyze in bytes
+- `timeout` (number, default: 300) - Request timeout in seconds
+- `max_redirects` (number, default: 10) - Maximum number of redirects to follow
+- `user_agent` (string) - Custom User-Agent string
+- `accept_invalid_certs` (boolean, default: false) - Accept invalid SSL certificates
+- `use_compression` (boolean, default: true) - Use HTTP compression
+- `proxy` (string) - Proxy URL to use
+- `aggressive_filtering` (boolean) - Enable aggressive file filtering
+
+Custom headers, credentials, and provider settings can be set using the following format:
+
+- `header.{name}` - Set custom HTTP header
+- `credential.{name}` - Set provider credential
+- `provider.{name}` - Set provider-specific setting
 
 ##### Example Request
 
 ```http
-GET /zmh-program/bytes-radar
+GET /zmh-program/bytes-radar?max_file_size=1048576&timeout=60&header.Authorization=token%20xyz
 ```
 
 ##### Example Response
@@ -125,19 +166,8 @@ GET /zmh-program/bytes-radar
       "complexity_ratio": 0.847,
       "documentation_ratio": 0
     }
-    // ... other languages ...
   ],
   "debug_info": {
-    "timestamp": "2025-07-06T23:59:50.662Z",
-    "wasm_initialized": true,
-    "target_url": "zmh-program/bytes-radar",
-    "options": {
-      "ignore_hidden": true,
-      "ignore_gitignore": true,
-      "max_file_size": -1
-    },
-    "analysis_duration_ms": 669,
-    "total_duration_ms": 669,
     "total_languages": 8,
     "total_files": 37
   }
@@ -150,10 +180,6 @@ GET /zmh-program/bytes-radar
 {
   "error": "Error message",
   "error_type": "NetworkError | AnalysisError",
-  "error_category": "URL_PARSING | NETWORK | BRANCH_ACCESS | UNKNOWN",
-  "suggested_fix": "Human-readable suggestion to fix the error",
-  "debug_info": {
-    // Debug information about the error
-  }
+  "url": "Original request URL"
 }
 ```

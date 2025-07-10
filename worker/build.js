@@ -48,15 +48,10 @@ execSync(
 );
 
 console.log("Generating TypeScript types...");
-const typesContent = `
-export interface AnalyzeOptions {
-  ignore_hidden: boolean;
-  ignore_gitignore: boolean;
-  max_file_size: number;
-}
-
-export function analyze_url(url: string, options: AnalyzeOptions): Promise<any>;
-`;
+const typesContent = fs.readFileSync(
+  path.join(process.cwd(), "worker", "types.d.ts"),
+  "utf-8",
+);
 
 fs.writeFileSync(
   path.join(process.cwd(), "worker/pkg", "bytes_radar.d.ts"),

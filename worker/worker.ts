@@ -1,4 +1,4 @@
-import type { AnalyzeOptions } from "./pkg/bytes_radar";
+import type { AnalysisOptions } from "./types";
 import wasmBinary from "./pkg/bytes_radar_bg.wasm";
 
 export interface Env {
@@ -71,6 +71,67 @@ export class BytesRadar {
     }
   }
 
+  private parseQueryOptions(searchParams: URLSearchParams): AnalysisOptions {
+    const options: AnalysisOptions = {
+      ignore_hidden: searchParams.get("ignore_hidden") !== "false",
+      ignore_gitignore: searchParams.get("ignore_gitignore") !== "false",
+      accept_invalid_certs: searchParams.get("accept_invalid_certs") === "true",
+      use_compression: searchParams.get("use_compression") !== "false",
+      headers: {},
+      credentials: {},
+      provider_settings: {},
+    };
+
+    // Parse numeric options
+    const numericOptions: Record<string, (val: number) => void> = {
+      timeout: (val) => (options.timeout = val),
+      max_redirects: (val) => (options.max_redirects = val),
+      max_file_size: (val) => (options.max_file_size = val),
+    };
+
+    for (const [key, setter] of Object.entries(numericOptions)) {
+      const value = searchParams.get(key);
+      if (value !== null) {
+        const numValue = parseInt(value, 10);
+        if (!isNaN(numValue)) {
+          setter(numValue);
+        }
+      }
+    }
+
+    // Parse string options
+    const stringOptions: Record<string, (val: string) => void> = {
+      user_agent: (val) => (options.user_agent = val),
+      proxy: (val) => (options.proxy = val),
+    };
+
+    for (const [key, setter] of Object.entries(stringOptions)) {
+      const value = searchParams.get(key);
+      if (value !== null) {
+        setter(value);
+      }
+    }
+
+    // Parse boolean options
+    if (searchParams.get("aggressive_filtering") !== null) {
+      options.aggressive_filtering =
+        searchParams.get("aggressive_filtering") === "true";
+    }
+
+    // Parse custom headers, credentials, and provider settings
+    for (const [key, value] of searchParams.entries()) {
+      if (key.startsWith("header.")) {
+        options.headers[key.slice(7)] = value;
+      } else if (key.startsWith("credential.")) {
+        options.credentials[key.slice(11)] = value;
+      } else if (key.startsWith("provider.")) {
+        options.provider_settings[key.slice(9)] = value;
+      }
+    }
+
+    return options;
+  }
+
   async fetch(request: Request) {
     const url = new URL(request.url);
     if (url.pathname === "/favicon.ico") {
@@ -78,21 +139,14 @@ export class BytesRadar {
     }
 
     const startTime = performance.now();
-    const debugInfo: any = {
-      timestamp: new Date().toISOString(),
-      wasm_initialized: this.wasmInitialized,
-    };
 
     try {
       await this.initializeWasm();
-      debugInfo.wasm_initialized = true;
 
       const pathParts = url.pathname.split("/").filter(Boolean);
       const targetUrl = pathParts.join("/");
 
       if (!targetUrl) {
-        debugInfo.error = "Missing repository path";
-        debugInfo.duration_ms = performance.now() - startTime;
         return new Response(
           JSON.stringify({
             error: "Missing repository path",
@@ -103,7 +157,6 @@ export class BytesRadar {
               "/gitlab.com/user/repo",
               "http://example.com/example-asset.tar.gz",
             ],
-            debug_info: debugInfo,
           }),
           {
             status: 400,
@@ -115,102 +168,21 @@ export class BytesRadar {
         );
       }
 
-      const maxSizeParam = url.searchParams.get("max_size");
-      const ignoreHiddenParam = url.searchParams.get("ignore_hidden");
-      const ignoreGitignoreParam = url.searchParams.get("ignore_gitignore");
-
-      const options: AnalyzeOptions = {
-        ignore_hidden: ignoreHiddenParam === "false" ? false : true,
-        ignore_gitignore: ignoreGitignoreParam === "false" ? false : true,
-        max_file_size:
-          maxSizeParam === "-1"
-            ? -1
-            : maxSizeParam
-              ? parseInt(maxSizeParam)
-              : -1,
-      };
-
-      debugInfo.target_url = targetUrl;
-      debugInfo.options = options;
-
+      const options = this.parseQueryOptions(url.searchParams);
       this.log("info", "Starting analysis", { url: targetUrl, options });
 
-      const analysisStartTime = performance.now();
       const result = await this.wasmModule.analyze_url(targetUrl, options);
-      const analysisEndTime = performance.now();
+      this.log("info", "Analysis completed successfully", result);
 
-      debugInfo.analysis_duration_ms = analysisEndTime - analysisStartTime;
-      debugInfo.total_duration_ms = analysisEndTime - startTime;
-
-      if (result && result.wasm_debug_info) {
-        Object.assign(debugInfo, result.wasm_debug_info);
-        delete result.wasm_debug_info;
-      }
-
-      const response = {
-        ...result,
-        debug_info: debugInfo,
-      };
-
-      this.log("info", "Analysis completed successfully", debugInfo);
-
-      return new Response(JSON.stringify(response), {
+      return new Response(JSON.stringify(result), {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
         },
       });
     } catch (error: unknown) {
-      let errorMessage = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      let errorType = "UnknownError";
-
-      if (error && typeof error === "object" && "error" in error) {
-        const wasmError = error as any;
-        errorMessage = wasmError.error || errorMessage;
-        errorType = wasmError.error_type || "WASMError";
-
-        if (wasmError.wasm_debug_info) {
-          Object.assign(debugInfo, wasmError.wasm_debug_info);
-          delete wasmError.wasm_debug_info;
-        }
-      }
-
-      debugInfo.error = errorMessage;
-      debugInfo.error_type = errorType;
-      debugInfo.error_stack = errorStack;
-      debugInfo.duration_ms = performance.now() - startTime;
-
-      if (errorMessage.includes("URL parsing error")) {
-        debugInfo.error_category = "URL_PARSING";
-        debugInfo.suggested_fix =
-          "Please check the URL format. Use formats like: user/repo, user/repo@branch, or full GitHub URLs";
-      } else if (
-        errorMessage.includes("network") ||
-        errorMessage.includes("download")
-      ) {
-        debugInfo.error_category = "NETWORK";
-        debugInfo.suggested_fix =
-          "Check your internet connection and ensure the repository is accessible";
-      } else if (errorMessage.includes("branch")) {
-        debugInfo.error_category = "BRANCH_ACCESS";
-        debugInfo.suggested_fix =
-          "The repository may not have the expected default branches (main, master, develop, dev)";
-      } else {
-        debugInfo.error_category = "UNKNOWN";
-        debugInfo.suggested_fix =
-          "Please check the error details and try again";
-      }
-
-      this.log("error", "Error in BytesRadar fetch", debugInfo);
-
-      const errorResponse: any = {
-        error: errorMessage,
-        error_type: errorType,
-        error_category: debugInfo.error_category,
-        suggested_fix: debugInfo.suggested_fix,
-        debug_info: debugInfo,
-      };
+      const errorResponse = this.handleError(error, startTime);
+      this.log("error", "Error in BytesRadar fetch", errorResponse);
 
       return new Response(JSON.stringify(errorResponse), {
         status: 500,
@@ -220,6 +192,25 @@ export class BytesRadar {
         },
       });
     }
+  }
+
+  private handleError(error: unknown, startTime: number) {
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    let errorType = "UnknownError";
+    let url = "";
+
+    if (error && typeof error === "object" && "error" in error) {
+      const wasmError = error as any;
+      errorMessage = wasmError.error || errorMessage;
+      errorType = wasmError.error_type || "WASMError";
+      url = wasmError.url || "";
+    }
+
+    return {
+      error: errorMessage,
+      error_type: errorType,
+      url,
+    };
   }
 }
 
