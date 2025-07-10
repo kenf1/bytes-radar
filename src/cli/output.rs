@@ -267,4 +267,3 @@ fn xml_escape(text: &str) -> String {
         .replace("\"", "&quot;")
         .replace("'", "&apos;")
 }
-

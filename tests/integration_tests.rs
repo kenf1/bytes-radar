@@ -143,8 +143,6 @@ mod integration_tests {
         let _analyzer = RemoteAnalyzer::new();
 
         let _default_analyzer = RemoteAnalyzer::default();
-
-        assert!(true);
     }
 
     #[test]
@@ -157,8 +155,6 @@ mod integration_tests {
         let mut credentials = std::collections::HashMap::new();
         credentials.insert("token".to_string(), "test-token".to_string());
         analyzer.set_provider_credentials("github", credentials);
-
-        assert!(true);
     }
 
     #[tokio::test]

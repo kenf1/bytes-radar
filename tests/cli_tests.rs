@@ -11,8 +11,6 @@ mod cli_tests {
         analyzer.set_timeout(120);
         analyzer.set_timeout(60);
         analyzer.set_timeout(300);
-
-        assert!(true);
     }
 
     #[test]
@@ -21,8 +19,6 @@ mod cli_tests {
 
         analyzer.set_allow_insecure(true);
         analyzer.set_allow_insecure(false);
-
-        assert!(true);
     }
 
     #[test]
@@ -39,8 +35,6 @@ mod cli_tests {
             "token_with_different_format".to_string(),
         );
         analyzer.set_provider_credentials("github", credentials2);
-
-        assert!(true);
     }
 
     #[test]
@@ -56,8 +50,6 @@ mod cli_tests {
 
         analyzer.set_timeout(60);
         analyzer.set_allow_insecure(false);
-
-        assert!(true);
     }
 
     #[tokio::test]
@@ -96,16 +88,12 @@ mod cli_tests {
         analyzer.set_provider_credentials("github", credentials2);
 
         analyzer.set_allow_insecure(true);
-
-        assert!(true);
     }
 
     #[test]
     fn test_default_analyzer_creation() {
         let _analyzer1 = RemoteAnalyzer::new();
         let _analyzer2 = RemoteAnalyzer::default();
-
-        assert!(true);
     }
 
     #[test]
@@ -121,8 +109,6 @@ mod cli_tests {
 
         analyzer2.set_timeout(120);
         analyzer2.set_allow_insecure(true);
-
-        assert!(true);
     }
 
     #[test]
@@ -139,7 +125,5 @@ mod cli_tests {
         let mut long_credentials = std::collections::HashMap::new();
         long_credentials.insert("token".to_string(), "a".repeat(1000));
         analyzer.set_provider_credentials("github", long_credentials);
-
-        assert!(true);
     }
 }

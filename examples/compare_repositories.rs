@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
     println!("{}", "-".repeat(75));
 
     for (repo, summary) in &results {
-        let repo_name = repo.split('/').last().unwrap_or(repo);
+        let repo_name = repo.split('/').next_back().unwrap_or(repo);
         let primary_lang = summary.primary_language.as_deref().unwrap_or("Unknown");
 
         println!(
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     });
 
     for (i, (repo, summary)) in complexity_ranking.iter().enumerate() {
-        let repo_name = repo.split('/').last().unwrap_or(repo);
+        let repo_name = repo.split('/').next_back().unwrap_or(repo);
         println!(
             "{}. {}: {:.1}% code ratio",
             i + 1,
@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
     });
 
     for (i, (repo, summary)) in doc_ranking.iter().enumerate() {
-        let repo_name = repo.split('/').last().unwrap_or(repo);
+        let repo_name = repo.split('/').next_back().unwrap_or(repo);
         println!(
             "{}. {}: {:.1}% documentation ratio",
             i + 1,
