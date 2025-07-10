@@ -162,11 +162,7 @@ impl GitLabProvider {
     }
 
     fn build_project_path(&self, owner: &str, repo: &str) -> String {
-        if owner.contains("/") {
-            format!("{}/{}", owner, repo)
-        } else {
-            format!("{}/{}", owner, repo)
-        }
+        format!("{}/{}", owner, repo)
     }
 }
 

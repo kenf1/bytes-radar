@@ -313,15 +313,10 @@ pub trait GitProvider: Send + Sync {
             {
                 builder = builder.timeout(Duration::from_secs(timeout));
             }
-            #[cfg(target_arch = "wasm32")]
-            {
-                // On WASM, timeout is handled differently
-                builder = builder.timeout(Duration::from_secs(timeout.min(300)));
-                // Max 5 minutes for WASM
-            }
         }
 
         // Set redirects
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(max_redirects) = config.max_redirects {
             builder = builder.redirect(reqwest::redirect::Policy::limited(max_redirects as usize));
         }
@@ -333,13 +328,11 @@ pub trait GitProvider: Send + Sync {
         }
 
         // Set compression
+        #[cfg(not(target_arch = "wasm32"))]
         if !config.use_compression {
             builder = builder.no_gzip();
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                builder = builder.no_brotli();
-                builder = builder.no_deflate();
-            }
+            builder = builder.no_brotli();
+            builder = builder.no_deflate();
         }
 
         // Set proxy (only on native)

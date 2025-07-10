@@ -51,7 +51,7 @@ pub struct Cli {
     pub url: Option<String>,
 
     // Version
-    #[arg(short = 'v', long = "version", action = clap::ArgAction::Version, help = "Print version information")]
+    #[arg(short = 'v', long = "version", action = clap::ArgAction::Version, help = "Current version information")]
     version: (),
 
     // Output Options

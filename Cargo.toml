@@ -65,7 +65,7 @@ reqwest = { version = "0.12", features = ["stream", "rustls-tls", "json"], defau
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 tokio = { version = "1.46", default-features = false, features = ["macros", "rt", "sync"] }
-reqwest = { version = "0.12", features = ["stream", "json"], default-features = false }
+reqwest = { version = "0.12", features = ["stream", "json", "default-tls"], default-features = false }
 
 [profile.release]
 opt-level = 3
