@@ -6,12 +6,14 @@
     "build": "node build.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "deploy:prod": "node build.js && wrangler deploy"
+    "deploy:prod": "node worker/build.js && wrangler deploy",
+    "prettier": "prettier --write . && cargo fmt"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20240208.0"
   },
   "devDependencies": {
+    "prettier": "^3.6.2",
     "typescript": "^5.3.3",
     "wrangler": "^3.28.1"
   }

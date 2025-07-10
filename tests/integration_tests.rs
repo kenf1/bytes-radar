@@ -143,8 +143,6 @@ mod integration_tests {
         let _analyzer = RemoteAnalyzer::new();
 
         let _default_analyzer = RemoteAnalyzer::default();
-
-        assert!(true);
     }
 
     #[test]
@@ -153,9 +151,10 @@ mod integration_tests {
 
         analyzer.set_timeout(120);
         analyzer.set_allow_insecure(true);
-        analyzer.set_github_token("test-token");
 
-        assert!(true);
+        let mut credentials = std::collections::HashMap::new();
+        credentials.insert("token".to_string(), "test-token".to_string());
+        analyzer.set_provider_credentials("github", credentials);
     }
 
     #[tokio::test]

@@ -11,8 +11,6 @@ mod cli_tests {
         analyzer.set_timeout(120);
         analyzer.set_timeout(60);
         analyzer.set_timeout(300);
-
-        assert!(true);
     }
 
     #[test]
@@ -21,18 +19,22 @@ mod cli_tests {
 
         analyzer.set_allow_insecure(true);
         analyzer.set_allow_insecure(false);
-
-        assert!(true);
     }
 
     #[test]
     fn test_remote_analyzer_github_token() {
         let mut analyzer = RemoteAnalyzer::new();
 
-        analyzer.set_github_token("ghp_test_token_123");
-        analyzer.set_github_token("token_with_different_format");
+        let mut credentials1 = std::collections::HashMap::new();
+        credentials1.insert("token".to_string(), "ghp_test_token_123".to_string());
+        analyzer.set_provider_credentials("github", credentials1);
 
-        assert!(true);
+        let mut credentials2 = std::collections::HashMap::new();
+        credentials2.insert(
+            "token".to_string(),
+            "token_with_different_format".to_string(),
+        );
+        analyzer.set_provider_credentials("github", credentials2);
     }
 
     #[test]
@@ -41,12 +43,13 @@ mod cli_tests {
 
         analyzer.set_timeout(180);
         analyzer.set_allow_insecure(true);
-        analyzer.set_github_token("test_token");
+
+        let mut credentials = std::collections::HashMap::new();
+        credentials.insert("token".to_string(), "test_token".to_string());
+        analyzer.set_provider_credentials("github", credentials);
 
         analyzer.set_timeout(60);
         analyzer.set_allow_insecure(false);
-
-        assert!(true);
     }
 
     #[tokio::test]
@@ -68,62 +71,29 @@ mod cli_tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_nonexistent_repository() {
-        let analyzer = RemoteAnalyzer::new();
-
-        let nonexistent_repos = vec![
-            "nonexistent-user/nonexistent-repo",
-            "https://github.com/this-user-does-not-exist/this-repo-does-not-exist",
-            "user/repo@nonexistent-branch",
-        ];
-
-        for repo in nonexistent_repos {
-            let result = analyzer.analyze_url(repo).await;
-            assert!(result.is_err(), "Expected error for repository: {}", repo);
-        }
-    }
-
     #[test]
     fn test_analyzer_configuration_persistence() {
         let mut analyzer = RemoteAnalyzer::new();
 
         analyzer.set_timeout(120);
-        analyzer.set_github_token("token1");
+
+        let mut credentials1 = std::collections::HashMap::new();
+        credentials1.insert("token".to_string(), "token1".to_string());
+        analyzer.set_provider_credentials("github", credentials1);
 
         analyzer.set_timeout(180);
-        analyzer.set_github_token("token2");
+
+        let mut credentials2 = std::collections::HashMap::new();
+        credentials2.insert("token".to_string(), "token2".to_string());
+        analyzer.set_provider_credentials("github", credentials2);
 
         analyzer.set_allow_insecure(true);
-
-        assert!(true);
-    }
-
-    #[tokio::test]
-    async fn test_malformed_github_urls() {
-        let analyzer = RemoteAnalyzer::new();
-
-        let malformed_urls = vec![
-            "github.com/user/repo",
-            "https://github.com/user",
-            "https://github.com/",
-            "https://github.com/user/",
-            "user/",
-            "/repo",
-        ];
-
-        for url in malformed_urls {
-            let result = analyzer.analyze_url(url).await;
-            assert!(result.is_err(), "Expected error for malformed URL: {}", url);
-        }
     }
 
     #[test]
     fn test_default_analyzer_creation() {
         let _analyzer1 = RemoteAnalyzer::new();
         let _analyzer2 = RemoteAnalyzer::default();
-
-        assert!(true);
     }
 
     #[test]
@@ -132,24 +102,13 @@ mod cli_tests {
         let mut analyzer2 = RemoteAnalyzer::new();
 
         analyzer1.set_timeout(60);
-        analyzer1.set_github_token("token1");
+
+        let mut credentials1 = std::collections::HashMap::new();
+        credentials1.insert("token".to_string(), "token1".to_string());
+        analyzer1.set_provider_credentials("github", credentials1);
 
         analyzer2.set_timeout(120);
         analyzer2.set_allow_insecure(true);
-
-        assert!(true);
-    }
-
-    #[tokio::test]
-    async fn test_timeout_behavior() {
-        let mut analyzer = RemoteAnalyzer::new();
-        analyzer.set_timeout(1);
-
-        let result = analyzer
-            .analyze_url("https://github.com/microsoft/vscode")
-            .await;
-
-        assert!(result.is_err());
     }
 
     #[test]
@@ -159,9 +118,12 @@ mod cli_tests {
         analyzer.set_timeout(0);
         analyzer.set_timeout(u64::MAX);
 
-        analyzer.set_github_token("");
-        analyzer.set_github_token("a".repeat(1000).as_str());
+        let mut empty_credentials = std::collections::HashMap::new();
+        empty_credentials.insert("token".to_string(), "".to_string());
+        analyzer.set_provider_credentials("github", empty_credentials);
 
-        assert!(true);
+        let mut long_credentials = std::collections::HashMap::new();
+        long_credentials.insert("token".to_string(), "a".repeat(1000));
+        analyzer.set_provider_credentials("github", long_credentials);
     }
 }

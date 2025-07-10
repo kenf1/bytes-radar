@@ -1,4 +1,4 @@
-use crate::core::{filter::IntelligentFilter, net::RemoteAnalyzer};
+use crate::{core::filter::IntelligentFilter, net::RemoteAnalyzer};
 use wasm_bindgen::prelude::*;
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -23,9 +23,11 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
     } else if let Some(aggressive) = opts.aggressive_filtering {
         analyzer.set_aggressive_filtering(aggressive);
     } else {
-        let mut filter = IntelligentFilter::default();
-        filter.max_file_size = opts.max_file_size as u64;
-        filter.ignore_hidden = opts.ignore_hidden;
+        let filter = IntelligentFilter {
+            max_file_size: opts.max_file_size as u64,
+            ignore_hidden: opts.ignore_hidden,
+            ..IntelligentFilter::default()
+        };
         analyzer.set_filter(filter);
     }
 
@@ -58,7 +60,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
             let language_statistics = analysis.get_language_statistics();
             let summary = analysis.get_summary();
 
-            let largest_file = analysis
+            let _largest_file = analysis
                 .language_analyses
                 .values()
                 .flat_map(|lang| &lang.file_metrics)

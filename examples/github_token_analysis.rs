@@ -1,4 +1,5 @@
 use bytes_radar::{RemoteAnalyzer, Result};
+use std::collections::HashMap;
 use std::env;
 
 #[tokio::main]
@@ -7,7 +8,11 @@ async fn main() -> Result<()> {
         env::var("GITHUB_TOKEN").expect("Please set GITHUB_TOKEN environment variable");
 
     let mut analyzer = RemoteAnalyzer::new();
-    analyzer.set_github_token(&github_token);
+
+    let mut credentials = HashMap::new();
+    credentials.insert("token".to_string(), github_token);
+    analyzer.set_provider_credentials("github", credentials);
+
     analyzer.set_timeout(120);
 
     let url = "https://github.com/your-username/your-repo";
