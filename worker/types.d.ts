@@ -33,5 +33,22 @@ export interface AnalysisOptions {
   ignore_hidden: boolean;
   ignore_gitignore: boolean;
   aggressive_filtering?: boolean;
-  custom_filter?: IntelligentFilter;
+}
+
+export interface CacheOptions {
+  ttl?: number;
+  maxSize?: number;
+  cleanupInterval?: number;
+}
+
+export interface CacheStats {
+  total: number;
+  expired: number;
+  size: number;
+}
+
+export interface CacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
 }

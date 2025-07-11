@@ -1,5 +1,6 @@
 import type { AnalysisOptions } from "./types";
 import wasmBinary from "./pkg/bytes_radar_bg.wasm";
+import { CacheManager } from "./cache";
 
 export interface Env {
   BYTES_RADAR: DurableObjectNamespace;
@@ -8,66 +9,32 @@ export interface Env {
 }
 
 export class BytesRadar {
-  state: DurableObjectState;
-  env: Env;
-  private wasmModule: any = null;
-  private wasmInitialized = false;
+  private wasmModule: any;
+  private wasmInitialized: boolean = false;
+  private cacheManager: CacheManager;
 
-  constructor(state: DurableObjectState, env: Env) {
-    this.state = state;
-    this.env = env;
+  constructor() {
+    this.cacheManager = new CacheManager({
+      ttl: 7200,
+      maxSize: 5000,
+      cleanupInterval: 600,
+    });
   }
 
-  private log(
-    level: "debug" | "info" | "warn" | "error",
-    message: string,
-    data?: any,
-  ) {
-    const logLevel = this.env.LOG_LEVEL || "info";
-    const environment = this.env.ENVIRONMENT || "development";
-
-    const levels = { debug: 0, info: 1, warn: 2, error: 3 };
-    const currentLevel = levels[logLevel as keyof typeof levels] || 1;
-    const messageLevel = levels[level];
-
-    if (messageLevel >= currentLevel) {
-      const timestamp = new Date().toISOString();
-      const logEntry = {
-        timestamp,
-        level: level.toUpperCase(),
-        environment,
-        message,
-        ...(data && { data }),
-      };
-
-      const fn = {
-        debug: console.debug,
-        info: console.info,
-        warn: console.warn,
-        error: console.error,
-      };
-
-      if (environment === "production") {
-        fn[level](JSON.stringify(logEntry));
-      } else {
-        fn[level](`[${level.toUpperCase()}] ${message}`, data ? data : "");
-      }
-    }
+  private log(level: string, message: string, data?: any) {
+    console.log(JSON.stringify({ level, message, data }));
   }
 
   private async initializeWasm() {
-    if (!this.wasmInitialized) {
-      try {
-        this.wasmModule = await import("./pkg/bytes_radar");
-        await this.wasmModule.default(wasmBinary);
-        this.wasmInitialized = true;
-        this.log("info", "WebAssembly module initialized successfully");
-      } catch (error) {
-        this.log("error", "Failed to initialize WebAssembly module", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        throw error;
-      }
+    if (this.wasmInitialized) return;
+    try {
+      this.wasmModule = await import("./pkg/bytes_radar");
+      await this.wasmModule.default(wasmBinary);
+      this.wasmInitialized = true;
+      this.log("info", "WASM initialized");
+    } catch (error) {
+      this.log("error", "WASM init failed", error);
+      throw error;
     }
   }
 
@@ -82,7 +49,6 @@ export class BytesRadar {
       provider_settings: {},
     };
 
-    // Parse numeric options
     const numericOptions: Record<string, (val: number) => void> = {
       timeout: (val) => (options.timeout = val),
       max_redirects: (val) => (options.max_redirects = val),
@@ -99,7 +65,6 @@ export class BytesRadar {
       }
     }
 
-    // Parse string options
     const stringOptions: Record<string, (val: string) => void> = {
       user_agent: (val) => (options.user_agent = val),
       proxy: (val) => (options.proxy = val),
@@ -112,13 +77,11 @@ export class BytesRadar {
       }
     }
 
-    // Parse boolean options
     if (searchParams.get("aggressive_filtering") !== null) {
       options.aggressive_filtering =
         searchParams.get("aggressive_filtering") === "true";
     }
 
-    // Parse custom headers, credentials, and provider settings
     for (const [key, value] of searchParams.entries()) {
       if (key.startsWith("header.")) {
         options.headers[key.slice(7)] = value;
@@ -130,6 +93,11 @@ export class BytesRadar {
     }
 
     return options;
+  }
+
+  private generateCacheKey(url: string, options: AnalysisOptions): string {
+    const { headers, credentials, ...cacheableOptions } = options;
+    return `${url}:${JSON.stringify(cacheableOptions)}`;
   }
 
   async fetch(request: Request) {
@@ -149,14 +117,8 @@ export class BytesRadar {
       if (!targetUrl) {
         return new Response(
           JSON.stringify({
-            error: "Missing repository path",
-            usage: [
-              "/[user/repo",
-              "/user/repo@master",
-              "/github.com/user/repo",
-              "/gitlab.com/user/repo",
-              "http://example.com/example-asset.tar.gz",
-            ],
+            error: "Missing path",
+            usage: ["/user/repo", "/user/repo@branch", "/github.com/user/repo"],
           }),
           {
             status: 400,
@@ -169,20 +131,38 @@ export class BytesRadar {
       }
 
       const options = this.parseQueryOptions(url.searchParams);
-      this.log("info", "Starting analysis", { url: targetUrl, options });
+      const cacheKey = this.generateCacheKey(targetUrl, options);
+
+      const cachedResult = this.cacheManager.get(cacheKey);
+      if (cachedResult) {
+        this.log("info", "Cache hit", { url: targetUrl });
+        return new Response(JSON.stringify(cachedResult), {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "X-Cache": "HIT",
+            "X-Cache-TTL": String(this.cacheManager["defaultTTL"]),
+          },
+        });
+      }
+
+      this.log("info", "Analysis start", { url: targetUrl });
 
       const result = await this.wasmModule.analyze_url(targetUrl, options);
-      this.log("info", "Analysis completed successfully", result);
+      this.cacheManager.set(cacheKey, result);
+
+      this.log("info", "Analysis done", result);
 
       return new Response(JSON.stringify(result), {
         headers: {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
+          "X-Cache": "MISS",
         },
       });
     } catch (error: unknown) {
       const errorResponse = this.handleError(error, startTime);
-      this.log("error", "Error in BytesRadar fetch", errorResponse);
+      this.log("error", "Request failed", errorResponse);
 
       return new Response(JSON.stringify(errorResponse), {
         status: 500,
