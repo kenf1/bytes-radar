@@ -1,6 +1,7 @@
 use crate::core::error::AnalysisError;
 use crate::net::ProviderConfig;
 use crate::{core::filter::IntelligentFilter, net::RemoteAnalyzer};
+use instant::Instant;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
@@ -51,8 +52,8 @@ impl Default for AnalysisOptions {
 struct WASMDebugInfo {
     total_languages: usize,
     total_files: usize,
-    spend_time: u64,
     version: String,
+    spend_time: u64,
 }
 
 #[derive(serde::Serialize)]
@@ -129,8 +130,8 @@ fn create_wasm_result(
         debug_info: WASMDebugInfo {
             total_languages: analysis.language_analyses.len(),
             total_files: analysis.global_metrics.file_count,
-            spend_time,
             version: VERSION.to_string(),
+            spend_time,
         },
     }
 }
@@ -148,8 +149,8 @@ fn create_error_result(error: AnalysisError, url: String, spend_time: u64) -> WA
         debug_info: WASMDebugInfo {
             total_languages: 0,
             total_files: 0,
-            spend_time,
             version: VERSION.to_string(),
+            spend_time,
         },
     }
 }
@@ -158,8 +159,6 @@ fn create_error_result(error: AnalysisError, url: String, spend_time: u64) -> WA
 pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsValue> {
     let opts: AnalysisOptions = serde_wasm_bindgen::from_value(options)?;
     console(&format!("Starting analysis for URL: {}", url));
-
-    let start_time = std::time::Instant::now();
 
     let mut analyzer = RemoteAnalyzer::new();
     analyzer.set_global_config(opts.to_provider_config());
@@ -172,6 +171,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
         },
     }
 
+    let start_time = Instant::now();
     let result = match analyzer.analyze_url(&url).await {
         Ok(analysis) => {
             let result = create_wasm_result(&analysis, start_time.elapsed().as_secs());
