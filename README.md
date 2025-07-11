@@ -1,8 +1,8 @@
 # Bytes Radar
 
 [![CI](https://github.com/zmh-program/bytes-radar/workflows/CI/badge.svg)](https://github.com/zmh-program/bytes-radar/actions)
-[![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/bytes-radar.svg)](https://crates.io/crates/bytes-radar)
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fzmh-program%2Fbytes-radar.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fzmh-program%2Fbytes-radar?ref=badge_shield)
 
