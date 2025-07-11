@@ -212,6 +212,6 @@ For detailed deployment instructions and API documentation, see [DEPLOYMENT GUID
 
 We welcome contributions! Please see [CONTRIBUTING GUIDE](docs/CONTRIBUTING.md) for guidelines.
 
-
 ## License
+
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fzmh-program%2Fbytes-radar.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fzmh-program%2Fbytes-radar?ref=badge_large)

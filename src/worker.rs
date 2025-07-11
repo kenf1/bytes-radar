@@ -53,7 +53,7 @@ struct WASMDebugInfo {
     total_languages: usize,
     total_files: usize,
     version: String,
-    spend_time: u64,
+    spend_time: f64,
 }
 
 #[derive(serde::Serialize)]
@@ -121,7 +121,7 @@ impl AnalysisOptions {
 
 fn create_wasm_result(
     analysis: &crate::core::analysis::ProjectAnalysis,
-    spend_time: u64,
+    spend_time: f64,
 ) -> WASMAnalysisResult {
     WASMAnalysisResult {
         project_name: analysis.project_name.clone(),
@@ -136,7 +136,7 @@ fn create_wasm_result(
     }
 }
 
-fn create_error_result(error: AnalysisError, url: String, spend_time: u64) -> WASMErrorResult {
+fn create_error_result(error: AnalysisError, url: String, spend_time: f64) -> WASMErrorResult {
     let error_type = match error {
         AnalysisError::NetworkError { .. } => "network_error",
         _ => "analysis_error",
@@ -174,7 +174,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
     let start_time = Instant::now();
     let result = match analyzer.analyze_url(&url).await {
         Ok(analysis) => {
-            let result = create_wasm_result(&analysis, start_time.elapsed().as_secs());
+            let result = create_wasm_result(&analysis, start_time.elapsed().as_secs_f64());
             console(&format!(
                 "Analysis completed successfully for project: {} ({} files, {} languages)",
                 analysis.project_name,
@@ -186,7 +186,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
         Err(e) => {
             console(&format!("Analysis failed: {}", e));
             console(&format!("Error details - URL: {}, Error: {:?}", url, e));
-            let error_result = create_error_result(e, url, start_time.elapsed().as_secs());
+            let error_result = create_error_result(e, url, start_time.elapsed().as_secs_f64());
             serde_wasm_bindgen::to_value(&error_result)?
         }
     };
