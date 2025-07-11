@@ -173,6 +173,42 @@ impl Read for StreamReader {
     }
 }
 
+pub async fn process_tarball(
+    bytes: bytes::Bytes,
+    project_analysis: &mut ProjectAnalysis,
+    filter: &IntelligentFilter,
+    _progress_hook: &dyn ProgressHook,
+) -> Result<()> {
+    let decoder = GzDecoder::new(Cursor::new(bytes));
+    let mut archive = Archive::new(decoder);
+
+    let entries = archive
+        .entries()
+        .map_err(|e| AnalysisError::archive(format!("Failed to read tar entries: {}", e)))?;
+
+    let mut stats = FilterStats::new();
+
+    for entry in entries {
+        let entry = entry
+            .map_err(|e| AnalysisError::archive(format!("Failed to read tar entry: {}", e)))?;
+
+        if let Ok(metrics) = process_tar_entry_sync(entry, filter, &mut stats) {
+            project_analysis.add_file_metrics(metrics)?;
+        }
+    }
+
+    #[cfg(feature = "cli")]
+    log::info!(
+        "Filter stats: processed {}/{} files ({:.1}% filtered), saved {}",
+        stats.processed,
+        stats.total_entries,
+        stats.filter_ratio() * 100.0,
+        stats.format_bytes_saved()
+    );
+
+    Ok(())
+}
+
 pub async fn process_tarball_stream(
     stream_reader: StreamReader,
     project_analysis: &mut ProjectAnalysis,

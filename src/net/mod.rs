@@ -411,7 +411,6 @@ impl RemoteAnalyzer {
     ) -> Result<ProjectAnalysis> {
         let mut project_analysis = ProjectAnalysis::new(project_name);
 
-        // Use global config to build client for direct downloads
         let client = self.build_global_client()?;
 
         let response = client.get(url).send().await.map_err(|e| {
@@ -428,31 +427,56 @@ impl RemoteAnalyzer {
         let total_size = response.content_length();
         self.progress_hook.on_download_progress(0, total_size);
 
-        let stream = response.bytes_stream();
-        let progress_hook = Arc::clone(&self.progress_hook);
-        let stream_reader = stream::StreamReader::new(
-            stream,
-            Box::new(move |downloaded, total| {
-                progress_hook.on_download_progress(downloaded, total);
-                log::debug!(
-                    "Downloaded: {} bytes of {} total",
-                    downloaded,
-                    total
-                        .map(|t| t.to_string())
-                        .unwrap_or_else(|| "unknown".to_string())
-                );
-            }),
-            total_size,
-        );
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let stream = response.bytes_stream();
+            let progress_hook = Arc::clone(&self.progress_hook);
+            let stream_reader = stream::StreamReader::new(
+                stream,
+                Box::new(move |downloaded, total| {
+                    progress_hook.on_download_progress(downloaded, total);
+                    log::debug!(
+                        "Downloaded: {} bytes of {} total",
+                        downloaded,
+                        total
+                            .map(|t| t.to_string())
+                            .unwrap_or_else(|| "unknown".to_string())
+                    );
+                }),
+                total_size,
+            );
 
-        self.progress_hook.on_processing_start("Processing...");
-        stream::process_tarball_stream(
-            stream_reader,
-            &mut project_analysis,
-            &self.filter,
-            self.progress_hook.as_ref(),
-        )
-        .await?;
+            self.progress_hook.on_processing_start("Processing...");
+            stream::process_tarball_stream(
+                stream_reader,
+                &mut project_analysis,
+                &self.filter,
+                self.progress_hook.as_ref(),
+            )
+            .await?;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let bytes = response.bytes().await.map_err(|e| {
+                crate::core::error::AnalysisError::network(format!(
+                    "Failed to read response bytes: {}",
+                    e
+                ))
+            })?;
+
+            self.progress_hook
+                .on_download_progress(bytes.len() as u64, total_size);
+            self.progress_hook.on_processing_start("Processing...");
+
+            stream::process_tarball(
+                bytes,
+                &mut project_analysis,
+                &self.filter,
+                self.progress_hook.as_ref(),
+            )
+            .await?;
+        }
 
         Ok(project_analysis)
     }

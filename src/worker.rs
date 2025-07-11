@@ -4,6 +4,8 @@ use crate::{core::filter::IntelligentFilter, net::RemoteAnalyzer};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn console(message: &str) {
     web_sys::console::log_1(&message.into());
 }
@@ -49,6 +51,8 @@ impl Default for AnalysisOptions {
 struct WASMDebugInfo {
     total_languages: usize,
     total_files: usize,
+    spend_time: u64,
+    version: String,
 }
 
 #[derive(serde::Serialize)]
@@ -114,7 +118,10 @@ impl AnalysisOptions {
     }
 }
 
-fn create_wasm_result(analysis: &crate::core::analysis::ProjectAnalysis) -> WASMAnalysisResult {
+fn create_wasm_result(
+    analysis: &crate::core::analysis::ProjectAnalysis,
+    spend_time: u64,
+) -> WASMAnalysisResult {
     WASMAnalysisResult {
         project_name: analysis.project_name.clone(),
         summary: analysis.get_summary(),
@@ -122,11 +129,13 @@ fn create_wasm_result(analysis: &crate::core::analysis::ProjectAnalysis) -> WASM
         debug_info: WASMDebugInfo {
             total_languages: analysis.language_analyses.len(),
             total_files: analysis.global_metrics.file_count,
+            spend_time,
+            version: VERSION.to_string(),
         },
     }
 }
 
-fn create_error_result(error: AnalysisError, url: String) -> WASMErrorResult {
+fn create_error_result(error: AnalysisError, url: String, spend_time: u64) -> WASMErrorResult {
     let error_type = match error {
         AnalysisError::NetworkError { .. } => "network_error",
         _ => "analysis_error",
@@ -139,6 +148,8 @@ fn create_error_result(error: AnalysisError, url: String) -> WASMErrorResult {
         debug_info: WASMDebugInfo {
             total_languages: 0,
             total_files: 0,
+            spend_time,
+            version: VERSION.to_string(),
         },
     }
 }
@@ -147,6 +158,8 @@ fn create_error_result(error: AnalysisError, url: String) -> WASMErrorResult {
 pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsValue> {
     let opts: AnalysisOptions = serde_wasm_bindgen::from_value(options)?;
     console(&format!("Starting analysis for URL: {}", url));
+
+    let start_time = std::time::Instant::now();
 
     let mut analyzer = RemoteAnalyzer::new();
     analyzer.set_global_config(opts.to_provider_config());
@@ -161,7 +174,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
 
     let result = match analyzer.analyze_url(&url).await {
         Ok(analysis) => {
-            let result = create_wasm_result(&analysis);
+            let result = create_wasm_result(&analysis, start_time.elapsed().as_secs());
             console(&format!(
                 "Analysis completed successfully for project: {} ({} files, {} languages)",
                 analysis.project_name,
@@ -173,7 +186,7 @@ pub async fn analyze_url(url: String, options: JsValue) -> Result<JsValue, JsVal
         Err(e) => {
             console(&format!("Analysis failed: {}", e));
             console(&format!("Error details - URL: {}, Error: {:?}", url, e));
-            let error_result = create_error_result(e, url);
+            let error_result = create_error_result(e, url, start_time.elapsed().as_secs());
             serde_wasm_bindgen::to_value(&error_result)?
         }
     };
